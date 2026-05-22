@@ -1,3 +1,3 @@
-public class RetrievalPanel {
+package ui;public class RetrievalPanel {
 
 }
