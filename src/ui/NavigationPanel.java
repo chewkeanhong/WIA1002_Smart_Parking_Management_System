@@ -1,3 +1,3 @@
-public class NavigationPanel {
+package ui;public class NavigationPanel {
 
 }
