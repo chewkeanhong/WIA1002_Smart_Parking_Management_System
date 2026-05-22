@@ -1,4 +1,5 @@
 package navigation;
+
 import java.util.HashMap;
 import java.util.Map;
 import java.util.List;
@@ -8,7 +9,7 @@ import java.util.Collection;
 
 public class RouteGraph {
     
-    // Inner class to represent structural elements or slots
+    // Inner class to represent structural nodes or individual parking bays
     public static class Node {
         public String id;
         public boolean isParkingSlot;
@@ -21,10 +22,10 @@ public class RouteGraph {
         }
     }
 
-    // Inner class for pathways
+    // Inner class for pathways connecting nodes
     public static class Edge {
         public Node target;
-        public double weight; // Travel cost / distance
+        public double weight; // Physical distance / travel time cost
 
         public Edge(Node target, double weight) {
             this.target = target;
@@ -35,79 +36,116 @@ public class RouteGraph {
     private final Map<String, Node> nodes = new HashMap<>();
     private final Map<String, List<Edge>> adjacencyList = new HashMap<>();
 
-    // Standard constructor
     public RouteGraph() {
-        // Keeps it flexible if you want an empty graph
+        // Keeps instantiation flexible
     }
 
-    // Explicit method to build your large layout setup instantly
+    /**
+     * Natively builds the massive 174-slot multi-stack mall car park grid layout.
+     * Keeps all 4 corners clear of slots to act strictly as transit junctions.
+     */
     public void initializeLargeMallLayout() {
-        // 1. SET UP TRANSIT SPACES & CORNERS (isParkingSlot = false)
+        // 1. INITIALIZE TRANSIT SPACES & TURNING CORNERS (isParkingSlot = false)
         this.addNode("MAIN_ENTRANCE", false);
         this.addNode("MAIN_EXIT", false);
         
-        // Corner Nodes - kept clear of slots to allow safe turning radiuses
-        this.addNode("CORNER_BL", false); // Bottom Left
-        this.addNode("CORNER_TL", false); // Top Left
-        this.addNode("CORNER_TR", false); // Top Right
-        this.addNode("CORNER_BR", false); // Bottom Right
+        // Blank Corners (Safe turning radiuses - NO PARKING STALLS ALLOWED)
+        this.addNode("CORNER_NW", false); 
+        this.addNode("CORNER_NE", false); 
+        this.addNode("CORNER_SW", false); 
+        this.addNode("CORNER_SE", false); 
         
-        // Main Driving Thoroughfares
-        this.addNode("LEFT_DRIVE_LANE", false);
-        this.addNode("RIGHT_DRIVE_LANE", false);
-        this.addNode("CENTRAL_DRIVE_LANE", false);
-        this.addNode("BACK_DRIVE_LANE", false);
+        // Primary Driving Aisle Thoroughfares
+        this.addNode("NORTH_DRIVE_LANE", false);  // Back Wall Lane
+        this.addNode("SOUTH_DRIVE_LANE", false);  // Front Entrance/Exit Lane
+        this.addNode("EAST_DRIVE_LANE", false);   // Right Wall Lane
+        this.addNode("WEST_DRIVE_LANE", false);   // Left Wall Lane
+        this.addNode("CENTER_CROSS_AISLE", false); // Main middle driving cross-spine
 
-        // 2. PROGRAMMATICALLY GENERATE LARGE PARKING ROWS
-        // Zone A (Middle-Left Block): 24 slots (ZA01 to ZA24)
-        for (int i = 1; i <= 24; i++) {
-            this.addNode("ZA" + String.format("%02d", i), true);
+
+        // 2. PROGRAMMATICALLY GENERATE THE WALL SLOTS (Perimeters)
+        // West (Left) Wall: 10 Slots (W_WALL_01 to W_WALL_10)
+        for (int i = 1; i <= 10; i++) {
+            this.addNode("W_WALL_" + String.format("%02d", i), true);
         }
-        // Zone B (Middle-Right Block): 24 slots (ZB01 to ZB24)
-        for (int i = 1; i <= 24; i++) {
-            this.addNode("ZB" + String.format("%02d", i), true);
+        
+        // East (Right) Wall: 10 Slots (E_WALL_01 to E_WALL_10)
+        for (int i = 1; i <= 10; i++) {
+            this.addNode("E_WALL_" + String.format("%02d", i), true);
         }
-        // Outer Perimeters (Left & Right Wall Slots): 12 slots each
-        for (int i = 1; i <= 12; i++) {
-            this.addNode("L_WALL_" + String.format("%02d", i), true);
-            this.addNode("R_WALL_" + String.format("%02d", i), true);
+        
+        // Back (North) Wall: 10 Slots (B_WALL_01 to B_WALL_10)
+        for (int i = 1; i <= 10; i++) {
+            this.addNode("B_WALL_" + String.format("%02d", i), true);
         }
 
-        // 3. CONNECT THE DRIVING VEINS (Primary Loop Topology)
-        this.addEdge("MAIN_ENTRANCE", "CORNER_BL", 4.0);
-        this.addEdge("CORNER_BL", "LEFT_DRIVE_LANE", 5.0);
-        this.addEdge("LEFT_DRIVE_LANE", "CORNER_TL", 8.0);
-        this.addEdge("CORNER_TL", "BACK_DRIVE_LANE", 6.0);
-        this.addEdge("BACK_DRIVE_LANE", "CENTRAL_DRIVE_LANE", 4.0);
-        this.addEdge("BACK_DRIVE_LANE", "CORNER_TR", 6.0);
-        this.addEdge("CORNER_TR", "RIGHT_DRIVE_LANE", 8.0);
-        this.addEdge("RIGHT_DRIVE_LANE", "CORNER_BR", 5.0);
-        this.addEdge("CORNER_BR", "MAIN_EXIT", 4.0);
 
-        // 4. ATTACH THE LARGE SLOTS PACKS TO DRIVE LANES
-        // Left wall slots link to Left lane
-        for (int i = 1; i <= 12; i++) {
-            this.addEdge("LEFT_DRIVE_LANE", "L_WALL_" + String.format("%02d", i), 1.5);
+        // 3. PROGRAMMATICALLY GENERATE THE 6 MIDDLE STACKS (Back-to-Back Rows)
+        // 6 distinct island stacks. Each stack has Row A (12 slots) and Row B (12 slots)
+        for (int stack = 1; stack <= 6; stack++) {
+            for (int slot = 1; slot <= 12; slot++) {
+                this.addNode("STK" + stack + "_A_" + String.format("%02d", slot), true);
+                this.addNode("STK" + stack + "_B_" + String.format("%02d", slot), true);
+            }
         }
-        // Right wall slots link to Right lane
-        for (int i = 1; i <= 12; i++) {
-            this.addEdge("RIGHT_DRIVE_LANE", "R_WALL_" + String.format("%02d", i), 1.5);
+
+
+        // 4. CONNECT THE MAIN TRAFFIC CIRCUITS (Outer Loop Grid Infrastructure)
+        this.addEdge("MAIN_ENTRANCE", "SOUTH_DRIVE_LANE", 2.0);
+        this.addEdge("SOUTH_DRIVE_LANE", "CORNER_SW", 3.0);
+        this.addEdge("CORNER_SW", "WEST_DRIVE_LANE", 4.0);
+        this.addEdge("WEST_DRIVE_LANE", "CORNER_NW", 12.0);
+        
+        this.addEdge("CORNER_NW", "NORTH_DRIVE_LANE", 4.0);
+        this.addEdge("NORTH_DRIVE_LANE", "CORNER_NE", 12.0);
+        this.addEdge("CORNER_NE", "EAST_DRIVE_LANE", 4.0);
+        this.addEdge("EAST_DRIVE_LANE", "CORNER_SE", 12.0);
+        
+        this.addEdge("CORNER_SE", "SOUTH_DRIVE_LANE", 3.0);
+        this.addEdge("SOUTH_DRIVE_LANE", "MAIN_EXIT", 2.0);
+
+        // Connect the outer perimeter drive loop to the central crossing aisle
+        this.addEdge("WEST_DRIVE_LANE", "CENTER_CROSS_AISLE", 6.0);
+        this.addEdge("CENTER_CROSS_AISLE", "EAST_DRIVE_LANE", 6.0);
+
+
+        // 5. MAP THE BAYS NATIVELY TO THEIR NEAREST DRIVING PATHWAYS
+        // Link Left Wall Slots to the West Drive Lane
+        for (int i = 1; i <= 10; i++) {
+            this.addEdge("WEST_DRIVE_LANE", "W_WALL_" + String.format("%02d", i), 1.5);
         }
-        // Zone A Slots are packed in the middle, accessible from Left and Central lanes
-        for (int i = 1; i <= 24; i++) {
-            String slotId = "ZA" + String.format("%02d", i);
-            this.addEdge("LEFT_DRIVE_LANE", slotId, 2.0);
-            this.addEdge("CENTRAL_DRIVE_LANE", slotId, 2.0);
+        
+        // Link Right Wall Slots to the East Drive Lane
+        for (int i = 1; i <= 10; i++) {
+            this.addEdge("EAST_DRIVE_LANE", "E_WALL_" + String.format("%02d", i), 1.5);
         }
-        // Zone B Slots are packed in the middle, accessible from Central and Right lanes
-        for (int i = 1; i <= 24; i++) {
-            String slotId = "ZB" + String.format("%02d", i);
-            this.addEdge("CENTRAL_DRIVE_LANE", slotId, 2.0);
-            this.addEdge("RIGHT_DRIVE_LANE", slotId, 2.0);
+        
+        // Link Back Wall Slots to the North Drive Lane
+        for (int i = 1; i <= 10; i++) {
+            this.addEdge("NORTH_DRIVE_LANE", "B_WALL_" + String.format("%02d", i), 1.5);
+        }
+
+        // Link the 6 dense central island double-stacks to corresponding driving streams
+        for (int stack = 1; stack <= 6; stack++) {
+            for (int slot = 1; slot <= 12; slot++) {
+                String rowASlot = "STK" + stack + "_A_" + String.format("%02d", slot);
+                String rowBSlot = "STK" + stack + "_B_" + String.format("%02d", slot);
+                
+                // Stacks 1, 2, 3 sit in the upper half (accessible from North and Center lanes)
+                if (stack <= 3) {
+                    this.addEdge("NORTH_DRIVE_LANE", rowASlot, 2.0);
+                    this.addEdge("CENTER_CROSS_AISLE", rowBSlot, 2.5);
+                } 
+                // Stacks 4, 5, 6 sit in the lower half (accessible from Center and South lanes)
+                else {
+                    this.addEdge("CENTER_CROSS_AISLE", rowASlot, 2.5);
+                    this.addEdge("SOUTH_DRIVE_LANE", rowBSlot, 2.0);
+                }
+            }
         }
     }
 
-    // Basic Graph API Methods
+    // --- STANDARD GRAPH APIS ---
     public void addNode(String id, boolean isParkingSlot) {
         Node node = new Node(id, isParkingSlot);
         nodes.put(id, node);
