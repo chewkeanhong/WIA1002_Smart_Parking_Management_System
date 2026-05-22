@@ -102,4 +102,15 @@ public class RecordLinkedList<T> {
     public int getSize() {
         return size;
     }
+
+    /**
+     * Returns a java.util.List snapshot for UI consumption.
+     * Time Complexity: O(N)
+     */
+    public java.util.List<T> toList() {
+        java.util.List<T> list = new java.util.ArrayList<>();
+        Node<T> curr = head;
+        while (curr != null) { list.add(curr.data); curr = curr.next; }
+        return list;
+    }
 }
