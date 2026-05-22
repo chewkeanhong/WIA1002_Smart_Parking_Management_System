@@ -1,5 +1,8 @@
 package ui;
 
+import gate_control.GateProcessor;
+import models.ParkingMap;
+
 import javax.swing.*;
 import javax.swing.border.*;
 import java.awt.*;
@@ -8,35 +11,35 @@ public class MainFrame extends JFrame {
 
     // ── Nav entries: [display text, card key, icon] ───────────────────────────
     private static final String[][] NAV = {
-        { "Dashboard",    "Dashboard",    "≡" },
-        { "Entry / Exit", "Entry / Exit", "↑" },
-        { "Slot Priority","Slot Priority","★" },
-        { "Search",       "Search",       "⌕" },
-        { "Routes",       "Routes",       "⇌" },
-        { "Logs",         "Logs",         "⏱" },
+        { "Dashboard",    "Dashboard",    "🏠" },
+        { "Entry / Exit", "Entry / Exit", "🚗" },
+        { "Slot Priority","Slot Priority","⭐" },
+        { "Search",       "Search",       "🔍" },
+        { "Routes",       "Routes",       "🗺️" },
+        { "Logs",         "Logs",         "📋" },
+        { "User",         "User",         "👤" },
     };
 
-    private final CardLayout   cardLayout  = new CardLayout();
-    private final JPanel       contentArea = new JPanel(cardLayout);
-    private final JButton[]    navBtns     = new JButton[NAV.length];
-    private final ActivityLog  log         = new ActivityLog();
+    private final CardLayout    cardLayout  = new CardLayout();
+    private final JPanel        contentArea = new JPanel(cardLayout);
+    private final JButton[]     navBtns     = new JButton[NAV.length];
+    private final ActivityLog   log         = new ActivityLog();
+    private final GateProcessor gate        = new GateProcessor();
+    private final ParkingMap    parkingMap  = new ParkingMap();
 
     // Panels
-    private DashboardPanel  dashboardPanel;
-    private ManagementPanel managementPanel;
+    private DashboardPanel   dashboardPanel;
+    private ManagementPanel  managementPanel;
     private GateControlPanel gateControlPanel;
     private AssignmentPanel  assignmentPanel;
     private NavigationPanel  navigationPanel;
     private SearchPanel      searchPanel;
-    private RetrievalPanel   retrievalPanel;
     private LogsPanel        logsPanel;
+    private UserPanel        userPanel;
 
-    // Sidebar stat refs
-    private JLabel     utilLabel;
-    private JProgressBar utilBar;
 
     public MainFrame() {
-        super("SmartPark — Ops Console");
+        super("SmartPark");
         UITheme.applyGlobalDefaults();
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setSize(1320, 860);
@@ -59,14 +62,14 @@ public class MainFrame extends JFrame {
     private JPanel buildContent() {
         contentArea.setBackground(UITheme.BG_DARK);
 
-        dashboardPanel   = new DashboardPanel(log);
-        gateControlPanel = new GateControlPanel(log);
+        dashboardPanel   = new DashboardPanel(log, parkingMap);
+        gateControlPanel = new GateControlPanel(log, gate);
         assignmentPanel  = new AssignmentPanel(log);
         searchPanel      = new SearchPanel(log);
         navigationPanel  = new NavigationPanel(log);
-        retrievalPanel   = new RetrievalPanel(log);
         logsPanel        = new LogsPanel(log);
         managementPanel  = new ManagementPanel(log, dashboardPanel);
+        userPanel        = new UserPanel(log, gate, parkingMap);
 
         contentArea.add(dashboardPanel,   "Dashboard");
         contentArea.add(gateControlPanel, "Entry / Exit");
@@ -74,11 +77,8 @@ public class MainFrame extends JFrame {
         contentArea.add(searchPanel,      "Search");
         contentArea.add(navigationPanel,  "Routes");
         contentArea.add(logsPanel,        "Logs");
-        // Management is accessed via Dashboard as it's embedded in the concept,
-        // but we also expose it — nav slot "Management" is not in the sidebar list
-        // (matches screenshot). We surface it through the Slot Priority route instead.
-        // Add it for direct card access even if unreachable via sidebar:
-        contentArea.add(managementPanel, "Management");
+        contentArea.add(userPanel,        "User");
+        contentArea.add(managementPanel,  "Management");
 
         return contentArea;
     }
@@ -92,36 +92,43 @@ public class MainFrame extends JFrame {
 
         sidebar.add(buildBrand(),   BorderLayout.NORTH);
         sidebar.add(buildNav(),     BorderLayout.CENTER);
-        sidebar.add(buildBottom(),  BorderLayout.SOUTH);
         return sidebar;
     }
 
     private JPanel buildBrand() {
-        JPanel p = new JPanel(new BorderLayout(10, 0));
+        JPanel p = new JPanel(new BorderLayout(12, 0));
         p.setBackground(UITheme.BG_SIDEBAR);
         p.setBorder(new EmptyBorder(22, 18, 20, 18));
 
-        // Blue "P" badge
-        JLabel icon = new JLabel("P", SwingConstants.CENTER);
-        icon.setFont(new Font("Segoe UI", Font.BOLD, 16));
-        icon.setForeground(Color.WHITE);
-        icon.setBackground(UITheme.ACCENT);
-        icon.setOpaque(true);
-        icon.setPreferredSize(new Dimension(34, 34));
+        // Colored badge: blue rounded rect with white car emoji
+        Font emojiFont = new Font("Segoe UI Emoji", Font.PLAIN, 18);
+        JPanel badge = new JPanel() {
+            @Override
+            protected void paintComponent(Graphics g) {
+                super.paintComponent(g);
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING,      RenderingHints.VALUE_ANTIALIAS_ON);
+                g2.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
+                g2.setColor(UITheme.ACCENT);
+                g2.fillRoundRect(0, 0, getWidth(), getHeight(), 10, 10);
+                g2.setFont(emojiFont);
+                g2.setColor(Color.WHITE);
+                FontMetrics fm = g2.getFontMetrics();
+                int x = (getWidth()  - fm.stringWidth("🚗")) / 2;
+                int y = (getHeight() + fm.getAscent() - fm.getDescent()) / 2;
+                g2.drawString("🚗", x, y);
+                g2.dispose();
+            }
+        };
+        badge.setOpaque(false);
+        badge.setPreferredSize(new Dimension(40, 40));
 
-        JPanel text = new JPanel(new GridLayout(2, 1, 0, 0));
-        text.setOpaque(false);
         JLabel name = new JLabel("SmartPark");
-        name.setFont(new Font("Segoe UI", Font.BOLD, 17));
+        name.setFont(new Font("Segoe UI", Font.BOLD, 22));
         name.setForeground(UITheme.TEXT_PRIMARY);
-        JLabel sub = new JLabel("Ops Console");
-        sub.setFont(UITheme.FONT_SMALL);
-        sub.setForeground(UITheme.TEXT_MUTED);
-        text.add(name);
-        text.add(sub);
 
-        p.add(icon, BorderLayout.WEST);
-        p.add(text, BorderLayout.CENTER);
+        p.add(badge, BorderLayout.WEST);
+        p.add(name,  BorderLayout.CENTER);
         return p;
     }
 
@@ -131,9 +138,13 @@ public class MainFrame extends JFrame {
         p.setLayout(new BoxLayout(p, BoxLayout.Y_AXIS));
         p.setBorder(new EmptyBorder(4, 10, 4, 10));
 
+        Font emojiFont = new Font("Segoe UI Emoji", Font.PLAIN, 14);
+
         for (int i = 0; i < NAV.length; i++) {
             final int idx = i;
-            JButton btn = new JButton(NAV[i][2] + "   " + NAV[i][0]);
+            final String emoji = NAV[i][2];
+
+            JButton btn = new JButton(NAV[i][0]);
             btn.setFont(UITheme.FONT_BODY);
             btn.setForeground(UITheme.TEXT_SECONDARY);
             btn.setBackground(UITheme.BG_SIDEBAR);
@@ -144,6 +155,20 @@ public class MainFrame extends JFrame {
             btn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
             btn.setMaximumSize(new Dimension(Integer.MAX_VALUE, 42));
             btn.setBorder(new EmptyBorder(11, 14, 11, 14));
+            btn.setIconTextGap(10);
+            btn.setIcon(new javax.swing.Icon() {
+                public void paintIcon(Component c, Graphics g, int x, int y) {
+                    Graphics2D g2 = (Graphics2D) g.create();
+                    g2.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING,
+                                        RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
+                    g2.setFont(emojiFont);
+                    g2.setColor(c.getForeground());
+                    g2.drawString(emoji, x, y + 14);
+                    g2.dispose();
+                }
+                public int getIconWidth()  { return 18; }
+                public int getIconHeight() { return 16; }
+            });
             btn.addActionListener(e -> showPanel(idx));
             navBtns[i] = btn;
             p.add(btn);
@@ -152,58 +177,6 @@ public class MainFrame extends JFrame {
         return p;
     }
 
-    private JPanel buildBottom() {
-        JPanel p = new JPanel();
-        p.setBackground(UITheme.BG_SIDEBAR);
-        p.setLayout(new BoxLayout(p, BoxLayout.Y_AXIS));
-        p.setBorder(new EmptyBorder(10, 14, 16, 14));
-
-        // Utilization card
-        JPanel card = new JPanel();
-        card.setBackground(UITheme.BG_CARD);
-        card.setLayout(new BoxLayout(card, BoxLayout.Y_AXIS));
-        card.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createLineBorder(UITheme.BORDER, 1),
-            new EmptyBorder(12, 12, 12, 12)));
-        card.setAlignmentX(Component.LEFT_ALIGNMENT);
-
-        JLabel lbl = new JLabel("UTILIZATION");
-        lbl.setFont(new Font("Segoe UI", Font.BOLD, 8));
-        lbl.setForeground(UITheme.TEXT_MUTED);
-        lbl.setAlignmentX(Component.LEFT_ALIGNMENT);
-
-        utilLabel = new JLabel("0 %");
-        utilLabel.setFont(new Font("Segoe UI", Font.BOLD, 26));
-        utilLabel.setForeground(UITheme.TEXT_PRIMARY);
-        utilLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
-
-        utilBar = new JProgressBar(0, 100);
-        utilBar.setValue(0);
-        utilBar.setStringPainted(false);
-        utilBar.setBackground(UITheme.BG_DARK);
-        utilBar.setForeground(UITheme.ACCENT);
-        utilBar.setBorderPainted(false);
-        utilBar.setMaximumSize(new Dimension(Integer.MAX_VALUE, 6));
-        utilBar.setAlignmentX(Component.LEFT_ALIGNMENT);
-
-        card.add(lbl);
-        card.add(Box.createVerticalStrut(4));
-        card.add(utilLabel);
-        card.add(Box.createVerticalStrut(8));
-        card.add(utilBar);
-
-        JButton changeBg = UITheme.makeSecondaryButton("⚙  Change Background");
-        changeBg.setForeground(UITheme.TEXT_SECONDARY);
-        changeBg.setFont(UITheme.FONT_SMALL);
-        changeBg.setMaximumSize(new Dimension(Integer.MAX_VALUE, 36));
-        changeBg.setAlignmentX(Component.LEFT_ALIGNMENT);
-        changeBg.addActionListener(e -> cycleBackground());
-
-        p.add(card);
-        p.add(Box.createVerticalStrut(8));
-        p.add(changeBg);
-        return p;
-    }
 
     // ── Navigation ────────────────────────────────────────────────────────────
     private void showPanel(int idx) {
@@ -216,25 +189,4 @@ public class MainFrame extends JFrame {
         cardLayout.show(contentArea, NAV[idx][1]);
     }
 
-    // ── Background cycling ────────────────────────────────────────────────────
-    private int bgIdx = 0;
-    private static final Color[] BG_CYCLE = {
-        UITheme.BG_DARK,
-        new Color(10, 15, 10),
-        new Color(20, 10, 28),
-        new Color(12, 18, 28),
-    };
-
-    private void cycleBackground() {
-        bgIdx = (bgIdx + 1) % BG_CYCLE.length;
-        contentArea.setBackground(BG_CYCLE[bgIdx]);
-    }
-
-    /** Called by child panels to update the sidebar utilization indicator. */
-    public void setUtilization(int pct) {
-        pct = Math.max(0, Math.min(100, pct));
-        utilLabel.setText(pct + " %");
-        utilBar.setValue(pct);
-        utilBar.setForeground(pct < 60 ? UITheme.SUCCESS : pct < 85 ? UITheme.WARNING : UITheme.DANGER);
-    }
 }

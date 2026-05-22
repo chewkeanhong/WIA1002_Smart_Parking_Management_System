@@ -42,6 +42,29 @@ public class EntryQueue {
     public boolean isEmpty() { return size == 0; }
     public int getSize()     { return size; }
 
+    /** Add vehicle to the FRONT of the queue (used by undo of a PROCESSED action) — O(1). */
+    public void enqueueAtFront(Vehicle vehicle) {
+        Node n = new Node(vehicle);
+        if (front == null) { front = n; rear = n; }
+        else { n.next = front; front = n; }
+        size++;
+    }
+
+    /** Remove the LAST (most recently enqueued) vehicle (used by undo of an ENQUEUED action) — O(n). */
+    public Vehicle removeLast() {
+        if (isEmpty()) return null;
+        if (front == rear) {          // only one node
+            Vehicle v = front.vehicle;
+            front = null; rear = null; size--;
+            return v;
+        }
+        Node curr = front;
+        while (curr.next != rear) curr = curr.next;
+        Vehicle v = rear.vehicle;
+        curr.next = null; rear = curr; size--;
+        return v;
+    }
+
     /** Returns a snapshot array in FIFO order for UI display. */
     public Vehicle[] toArray() {
         Vehicle[] arr = new Vehicle[size];
