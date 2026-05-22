@@ -1,86 +1,75 @@
 package gate_control;
 
 import models.Vehicle;
+
+/**
+ * Custom FIFO queue backed by a singly-linked list.
+ * Enqueue: O(1)  |  Dequeue: O(1)  |  Peek: O(1)
+ */
 public class EntryQueue {
+
+    private static class Node {
+        Vehicle vehicle;
+        Node next;
+        Node(Vehicle v) { this.vehicle = v; }
+    }
+
     private Node front;
     private Node rear;
     private int size;
 
-    public EntryQueue(){
-        this.front=null;
-        this.rear=null;
-        size=0;
-    }
+    public EntryQueue() { front = null; rear = null; size = 0; }
 
-
-    public void enqueue(Vehicle vehicle){
-        Node newVec=new Node(vehicle);
+    /** Add vehicle to the back of the queue — O(1). */
+    public void enqueue(Vehicle vehicle) {
+        Node n = new Node(vehicle);
+        if (rear == null) { front = n; rear = n; }
+        else { rear.next = n; rear = n; }
         size++;
-        if(isEmpty()){
-            front=newVec;
-            rear=newVec;
-            return;
-        }
-        rear.setNext(newVec);
-        rear=newVec;
-        return;
     }
 
-    public Vehicle dequeue(){
-        if(isEmpty()){
-            return null;
-        }
-        Node temp=front;
-        if(front==rear){
-            front=null;
-            rear=null;
-            size--; //also can set to 0
-            return temp.getElement();   
-        }
-        front=front.getNext();
+    /** Remove and return the front vehicle — O(1). */
+    public Vehicle dequeue() {
+        if (isEmpty()) return null;
+        Vehicle v = front.vehicle;
+        front = front.next;
+        if (front == null) rear = null;
         size--;
-        return temp.getElement();
-
+        return v;
     }
 
-    public Vehicle peek(){
-        if(front==null){
-            return null;
+    public Vehicle peek()    { return isEmpty() ? null : front.vehicle; }
+    public boolean isEmpty() { return size == 0; }
+    public int getSize()     { return size; }
+
+    /** Add vehicle to the FRONT of the queue (used by undo of a PROCESSED action) — O(1). */
+    public void enqueueAtFront(Vehicle vehicle) {
+        Node n = new Node(vehicle);
+        if (front == null) { front = n; rear = n; }
+        else { n.next = front; front = n; }
+        size++;
+    }
+
+    /** Remove the LAST (most recently enqueued) vehicle (used by undo of an ENQUEUED action) — O(n). */
+    public Vehicle removeLast() {
+        if (isEmpty()) return null;
+        if (front == rear) {          // only one node
+            Vehicle v = front.vehicle;
+            front = null; rear = null; size--;
+            return v;
         }
-        return this.front.getElement();
+        Node curr = front;
+        while (curr.next != rear) curr = curr.next;
+        Vehicle v = rear.vehicle;
+        curr.next = null; rear = curr; size--;
+        return v;
     }
 
-    public boolean isEmpty(){
-        return front==null;
+    /** Returns a snapshot array in FIFO order for UI display. */
+    public Vehicle[] toArray() {
+        Vehicle[] arr = new Vehicle[size];
+        Node curr = front;
+        for (int i = 0; i < size; i++) { arr[i] = curr.vehicle; curr = curr.next; }
+        return arr;
     }
-
-    public int size(){
-        return this.size;
-    }
-
-    public void displayQueue(){
-        if(isEmpty()){
-            System.out.println("Queue is empty");
-            return;
-        }
-        Node current=front;
-        while(current!=null){
-            if(current.getNext()!=null){
-                System.out.print(current.getElement()+",");
-            }
-            else{
-                System.out.print(current.getElement());
-            }
-            current=current.getNext();
-        }
-        return;
-    }
-
-    public Vehicle getFrontVehicle(){
-        if(isEmpty()){
-            return null;
-        }
-        return this.front.getElement();
-    }
-
 }

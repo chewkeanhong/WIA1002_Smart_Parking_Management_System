@@ -70,4 +70,31 @@ public class RecordManager {
         parkingSlotRecords.display();
         System.out.println("Total Slots: " + parkingSlotRecords.getSize());
     }
+
+    // ==========================================
+    // UI-FACING LIST ACCESSORS
+    // ==========================================
+
+    public java.util.List<Vehicle> getAllVehiclesList() {
+        return vehicleRecords.toList();
+    }
+
+    public java.util.List<ParkingSlot> getAllParkingSlotsList() {
+        return parkingSlotRecords.toList();
+    }
+
+    public Vehicle findVehicleByPlate(String plate) {
+        for (Vehicle v : vehicleRecords.toList())
+            if (v.getLicensePlate().equalsIgnoreCase(plate)) return v;
+        return null;
+    }
+
+    public ParkingSlot findSlotById(String id) {
+        for (ParkingSlot s : parkingSlotRecords.toList())
+            if (s.getSlotId().equalsIgnoreCase(id)) return s;
+        return null;
+    }
+
+    public int getVehicleCount()     { return vehicleRecords.getSize(); }
+    public int getParkingSlotCount() { return parkingSlotRecords.getSize(); }
 }
