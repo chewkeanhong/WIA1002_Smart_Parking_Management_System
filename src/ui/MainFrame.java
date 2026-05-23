@@ -1,6 +1,7 @@
 package ui;
 
 import gate_control.GateProcessor;
+import management.RecordManager;
 import models.ParkingMap;
 
 import javax.swing.*;
@@ -26,6 +27,7 @@ public class MainFrame extends JFrame {
     private final ActivityLog   log         = new ActivityLog();
     private final GateProcessor gate        = new GateProcessor();
     private final ParkingMap    parkingMap  = new ParkingMap();
+    private final RecordManager records     = new RecordManager();
 
     // Panels
     private DashboardPanel   dashboardPanel;
@@ -65,11 +67,11 @@ public class MainFrame extends JFrame {
         dashboardPanel   = new DashboardPanel(log, parkingMap);
         gateControlPanel = new GateControlPanel(log, gate);
         assignmentPanel  = new AssignmentPanel(log);
-        searchPanel      = new SearchPanel(log);
-        navigationPanel  = new NavigationPanel(log);
+        searchPanel      = new SearchPanel(log, records);
+        navigationPanel  = new NavigationPanel(log, records, parkingMap);
         logsPanel        = new LogsPanel(log);
-        managementPanel  = new ManagementPanel(log, dashboardPanel);
-        userPanel        = new UserPanel(log, gate, parkingMap);
+        managementPanel  = new ManagementPanel(log, dashboardPanel, records);
+        userPanel        = new UserPanel(log, gate, parkingMap, records);
 
         contentArea.add(dashboardPanel,   "Dashboard");
         contentArea.add(gateControlPanel, "Entry / Exit");

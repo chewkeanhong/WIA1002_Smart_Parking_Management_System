@@ -14,11 +14,19 @@ public class RouteGraph {
         public String id;
         public boolean isParkingSlot;
         public boolean isOccupied;
+        public double x;
+        public double y;
 
         public Node(String id, boolean isParkingSlot) {
             this.id = id;
             this.isParkingSlot = isParkingSlot;
-            this.isOccupied = false; 
+            this.isOccupied = false;
+        }
+
+        public Node(String id, boolean isParkingSlot, double x, double y) {
+            this(id, isParkingSlot);
+            this.x = x;
+            this.y = y;
         }
     }
 
@@ -145,9 +153,126 @@ public class RouteGraph {
         }
     }
 
+    /**
+     * Builds a graph that mirrors the dashboard's 40-slot lot — two 2×10 blocks
+     * separated by a central driving aisle, framed by roads on all four sides.
+     * Slot nodes are named A01–A40 (matching {@code ParkingMap.slotId}) so that
+     * a vehicle's {@code assignedSlotId} can be used directly as a destination.
+     *
+     * Coordinates are in logical pixel units (the canvas scales them to fit).
+     */
+    public void initializeDashboardLayout() {
+        // Slot column x-positions (10 cols) and the canvas frame y-positions.
+        double[] colX = new double[10];
+        double leftEdge = 110, rightEdge = 890;
+        for (int i = 0; i < 10; i++) {
+            colX[i] = leftEdge + i * ((rightEdge - leftEdge) / 9.0);
+        }
+        double yTopRoad   =  60;
+        double yBlk1Row0  = 150;
+        double yBlk1Row1  = 230;
+        double yMidAisle  = 320;
+        double yBlk2Row0  = 410;
+        double yBlk2Row1  = 490;
+        double yBotRoad   = 580;
+        double xLeftRoad  =  50;
+        double xRightRoad = 950;
+
+        // 1. Road junction nodes
+        addNode("NW", false, xLeftRoad,  yTopRoad);
+        addNode("NE", false, xRightRoad, yTopRoad);
+        addNode("SW", false, xLeftRoad,  yBotRoad);
+        addNode("SE", false, xRightRoad, yBotRoad);
+        addNode("GATE_A", false, xLeftRoad,  yMidAisle);  // mid-left  (label)
+        addNode("GATE_B", false, xRightRoad, yMidAisle);  // mid-right (label)
+        addNode("GATE_C", false, 500.0,     yTopRoad);    // top-center (label)
+        addNode("ENTRANCE", false, 470.0,   yBotRoad);
+        addNode("EXIT",     false, 530.0,   yBotRoad);
+
+        // Per-column waypoints on top road, mid aisle, bottom road.
+        for (int i = 0; i < 10; i++) {
+            addNode("TOP_C" + i, false, colX[i], yTopRoad);
+            addNode("MID_C" + i, false, colX[i], yMidAisle);
+            addNode("BOT_C" + i, false, colX[i], yBotRoad);
+        }
+
+        // 2. Slot nodes (A01–A40) positioned at their cell centers.
+        for (int i = 0; i < 40; i++) {
+            int col = i % 10;
+            double sy;
+            int row = i / 10;
+            switch (row) {
+                case 0:  sy = yBlk1Row0; break;
+                case 1:  sy = yBlk1Row1; break;
+                case 2:  sy = yBlk2Row0; break;
+                default: sy = yBlk2Row1; break;
+            }
+            String id = String.format("A%02d", i + 1);
+            addNode(id, true, colX[col], sy);
+        }
+
+        // 3. Edges: roads form a connected frame + central aisle.
+        // Top road: NW – GATE_C(via TOP_C nodes) – NE
+        linkChain("NW", "TOP_C0");
+        for (int i = 0; i < 9; i++) linkChain("TOP_C" + i, "TOP_C" + (i + 1));
+        linkChain("TOP_C9", "NE");
+        // Bottom road: SW – ENTRANCE/EXIT – SE
+        linkChain("SW", "BOT_C0");
+        for (int i = 0; i < 9; i++) linkChain("BOT_C" + i, "BOT_C" + (i + 1));
+        linkChain("BOT_C9", "SE");
+        // Entrance / exit hook onto nearest column waypoints (BOT_C4 ≈ x 461, BOT_C5 ≈ x 548).
+        linkChain("BOT_C4", "ENTRANCE");
+        linkChain("ENTRANCE", "BOT_C5");
+        linkChain("BOT_C4", "EXIT");
+        linkChain("EXIT",     "BOT_C5");
+        // Side roads (with GATE_A / GATE_B sitting on them mid-way).
+        linkChain("NW", "GATE_A");
+        linkChain("GATE_A", "SW");
+        linkChain("NE", "GATE_B");
+        linkChain("GATE_B", "SE");
+        // Central aisle
+        linkChain("GATE_A", "MID_C0");
+        for (int i = 0; i < 9; i++) linkChain("MID_C" + i, "MID_C" + (i + 1));
+        linkChain("MID_C9", "GATE_B");
+        // Gate C sits on top road between TOP_C4 and TOP_C5.
+        linkChain("TOP_C4", "GATE_C");
+        linkChain("GATE_C", "TOP_C5");
+
+        // 4. Each slot connects to its nearest road waypoint.
+        for (int i = 0; i < 40; i++) {
+            String id = String.format("A%02d", i + 1);
+            int col = i % 10;
+            int row = i / 10;
+            switch (row) {
+                case 0: linkChain("TOP_C" + col, id); break; // block 1, row 0 → top road
+                case 1: linkChain("MID_C" + col, id); break; // block 1, row 1 → middle aisle
+                case 2: linkChain("MID_C" + col, id); break; // block 2, row 0 → middle aisle
+                default: linkChain("BOT_C" + col, id); break; // block 2, row 1 → bottom road
+            }
+        }
+    }
+
+    /** Adds bidirectional edges between two nodes, weighted by Euclidean distance. */
+    private void linkChain(String a, String b) {
+        Node na = nodes.get(a);
+        Node nb = nodes.get(b);
+        if (na == null || nb == null) return;
+        double dx = na.x - nb.x;
+        double dy = na.y - nb.y;
+        double w  = Math.sqrt(dx * dx + dy * dy);
+        addEdge(a, b, w);
+        addEdge(b, a, w);
+    }
+
     // --- STANDARD GRAPH APIS ---
     public void addNode(String id, boolean isParkingSlot) {
         Node node = new Node(id, isParkingSlot);
+        nodes.put(id, node);
+        adjacencyList.put(id, new ArrayList<>());
+    }
+
+    public void addNode(String id, boolean isParkingSlot, double x, double y) {
+        Node node = new Node(id, isParkingSlot, x, y);
         nodes.put(id, node);
         adjacencyList.put(id, new ArrayList<>());
     }

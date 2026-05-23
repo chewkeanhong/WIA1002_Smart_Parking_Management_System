@@ -65,6 +65,27 @@ public class EntryQueue {
         return v;
     }
 
+    /**
+     * Removes the first node holding the given vehicle (by reference). Returns true if found.
+     * Used when a user cancels a queued entry via the UI before it is dequeued.
+     */
+    public boolean remove(Vehicle vehicle) {
+        if (isEmpty() || vehicle == null) return false;
+        if (front.vehicle == vehicle) {
+            front = front.next;
+            if (front == null) rear = null;
+            size--;
+            return true;
+        }
+        Node curr = front;
+        while (curr.next != null && curr.next.vehicle != vehicle) curr = curr.next;
+        if (curr.next == null) return false;
+        if (curr.next == rear) rear = curr;
+        curr.next = curr.next.next;
+        size--;
+        return true;
+    }
+
     /** Returns a snapshot array in FIFO order for UI display. */
     public Vehicle[] toArray() {
         Vehicle[] arr = new Vehicle[size];

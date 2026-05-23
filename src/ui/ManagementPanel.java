@@ -19,7 +19,7 @@ public class ManagementPanel extends JPanel {
 
     private final ActivityLog    log;
     private final DashboardPanel dashboard;
-    private final RecordManager  mgr = new RecordManager();
+    private final RecordManager  mgr;
 
     // Vehicle table model
     private final DefaultTableModel vehicleModel = new DefaultTableModel(
@@ -37,9 +37,10 @@ public class ManagementPanel extends JPanel {
     private JTextField tfPlate, tfOwner, tfSlotId, tfDist;
     private JLabel statusLabel;
 
-    public ManagementPanel(ActivityLog log, DashboardPanel dashboard) {
+    public ManagementPanel(ActivityLog log, DashboardPanel dashboard, RecordManager mgr) {
         this.log       = log;
         this.dashboard = dashboard;
+        this.mgr       = mgr;
         setBackground(UITheme.BG_DARK);
         setLayout(new BorderLayout(0, 16));
         setBorder(new EmptyBorder(28, 28, 28, 28));

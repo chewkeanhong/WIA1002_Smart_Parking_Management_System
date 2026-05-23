@@ -1,6 +1,7 @@
 package ui;
 
 import gate_control.GateProcessor;
+import management.RecordManager;
 import models.ParkingMap;
 import models.Vehicle;
 
@@ -15,17 +16,20 @@ public class UserPanel extends JPanel {
     private final GateProcessor      gate;
     private final ActivityLog        log;
     private final ParkingMap         parkingMap;
+    private final RecordManager      records;
     private final JPanel             bubbleContainer;
     private final JLabel             statusLabel;
-    private final Map<JPanel, Timer>  bubbleTimers = new HashMap<>();
-    private final Map<JPanel, String> bubbleSlots  = new HashMap<>();
+    private final Map<JPanel, Timer>   bubbleTimers   = new HashMap<>();
+    private final Map<JPanel, String>  bubbleSlots    = new HashMap<>();
+    private final Map<JPanel, Vehicle> bubbleVehicles = new HashMap<>();
 
     private int bubbleCounter = 0;
 
-    public UserPanel(ActivityLog log, GateProcessor gate, ParkingMap parkingMap) {
+    public UserPanel(ActivityLog log, GateProcessor gate, ParkingMap parkingMap, RecordManager records) {
         this.gate       = gate;
         this.log        = log;
         this.parkingMap = parkingMap;
+        this.records    = records;
 
         setBackground(UITheme.BG_DARK);
         setLayout(new BorderLayout(0, 0));
@@ -250,6 +254,7 @@ public class UserPanel extends JPanel {
 
         Vehicle v = new Vehicle(plate, name, System.currentTimeMillis());
         gate.vehicleArrives(v);
+        bubbleVehicles.put(bubble, v);
         log.log("USER  Joined queue: " + plate + " (" + name + ")");
 
         JLabel[] posLabelRef   = {null};
@@ -287,6 +292,10 @@ public class UserPanel extends JPanel {
                         slotRef[0] = slot;
                         parkingMap.markOccupied(slot);
                         bubbleSlots.put(bubble, slot);
+                        v.setAssignedSlotId(slot);
+                        if (records.findVehicleByPlate(plate) == null) {
+                            records.addVehicleRecord(v);
+                        }
 
                         assignedCardRef[0] = buildAssignedCard(bubble, number, plate, name, slot);
                         bubble.add(assignedCardRef[0], "ASSIGNED");
@@ -320,6 +329,9 @@ public class UserPanel extends JPanel {
                         bubbleSlots.remove(bubble);
                         slotRef[0] = null;
                     }
+                    v.setAssignedSlotId(null);
+                    Vehicle existing = records.findVehicleByPlate(plate);
+                    if (existing != null) records.removeVehicleRecord(existing);
                     if (assignedCardRef[0] != null) {
                         bubble.remove(assignedCardRef[0]);
                         assignedCardRef[0] = null;
@@ -341,6 +353,13 @@ public class UserPanel extends JPanel {
         if (t != null) t.stop();
         String slot = bubbleSlots.remove(bubble);
         if (slot != null) parkingMap.markFree(slot);
+        Vehicle v = bubbleVehicles.remove(bubble);
+        if (v != null) {
+            v.setAssignedSlotId(null);
+            Vehicle existing = records.findVehicleByPlate(v.getLicensePlate());
+            if (existing != null) records.removeVehicleRecord(existing);
+            gate.purgeVehicle(v);   // clear from queue + undo stack so no ghost resurrection
+        }
         bubbleContainer.remove(bubble);
         bubbleContainer.revalidate();
         bubbleContainer.repaint();

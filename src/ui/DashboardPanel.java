@@ -130,7 +130,7 @@ public class DashboardPanel extends JPanel {
         titleRow.add(legend, BorderLayout.EAST);
         card.add(titleRow, BorderLayout.NORTH);
 
-        // ── Build all 30 slot cells
+        // ── Build all slot cells (two 2×10 blocks = 40)
         int total = ParkingMap.total();
         slotCells  = new JPanel[total];
         slotLabels = new JLabel[total];
@@ -146,45 +146,65 @@ public class DashboardPanel extends JPanel {
             slotLabels[i] = lbl;
         }
 
-        // ── Slot rows with road lanes between them
-        int cellH  = 58;
-        int laneH  = 18;
-        int totalH = 3 * cellH + 2 * laneH;   // 210 px
+        // ── Two 2×10 blocks separated by a central driving aisle
+        int cellH       = 58;
+        int laneH       = 26;          // horizontal road thickness (top / middle / bottom)
+        int laneW       = 36;          // vertical road thickness (left / right)
+        int labelStripH = 18;          // height of the gate label strip below the top road
+        int labelStripW = 46;          // width of the side gate label strips
+        int gateGap     = 6;           // gap between road asphalt and the label strip
+        int innerGap    = 3;
+        int innerH      = 4 * cellH + laneH + 2 * innerGap;        // grid + middle road
+        int totalH      = innerH + 2 * laneH + labelStripH + gateGap;
 
         JPanel slotsPanel = new JPanel();
         slotsPanel.setOpaque(false);
         slotsPanel.setLayout(new BoxLayout(slotsPanel, BoxLayout.Y_AXIS));
         // no fixed preferred width → BoxLayout fills available horizontal space
-        slotsPanel.setPreferredSize(new Dimension(0, totalH));
-        slotsPanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, totalH));
+        slotsPanel.setPreferredSize(new Dimension(0, innerH));
+        slotsPanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, innerH));
         slotsPanel.add(makeSlotRow(0,  10, cellH));
-        slotsPanel.add(makeRoadLane(laneH));
+        slotsPanel.add(Box.createVerticalStrut(innerGap));
         slotsPanel.add(makeSlotRow(10, 20, cellH));
         slotsPanel.add(makeRoadLane(laneH));
         slotsPanel.add(makeSlotRow(20, 30, cellH));
+        slotsPanel.add(Box.createVerticalStrut(innerGap));
+        slotsPanel.add(makeSlotRow(30, 40, cellH));
 
-        // ── Gate A / B vertically centred beside the slot rows
-        JPanel gateAWrap = centreV(gateLabel("Gate A"), totalH);
-        JPanel gateBWrap = centreV(gateLabel("Gate B"), totalH);
+        // ── Roads frame the slot grid on all four sides; gates sit on the side / top roads
+        JPanel lot = new JPanel(new BorderLayout());
+        lot.setOpaque(false);
+        lot.setAlignmentX(Component.LEFT_ALIGNMENT);
+        lot.setMaximumSize(new Dimension(Integer.MAX_VALUE, totalH));
+        lot.setPreferredSize(new Dimension(0, totalH));
+        // NORTH and SOUTH are trimmed so the top/bottom roads only span between the side roads.
+        // Each strut on either side has an asphalt "corner piece" at the inner edge so the road
+        // visually continues around the corner.
+        int sideTotalW = labelStripW + gateGap + laneW;
+        int northH     = labelStripH + gateGap + laneH;
+        int cornerTopOffset = labelStripH + gateGap;
 
-        JPanel mapRow = new JPanel();
-        mapRow.setOpaque(false);
-        mapRow.setLayout(new BoxLayout(mapRow, BoxLayout.X_AXIS));
-        mapRow.setAlignmentX(Component.LEFT_ALIGNMENT);
-        mapRow.setMaximumSize(new Dimension(Integer.MAX_VALUE, totalH));
-        mapRow.add(gateAWrap);
-        mapRow.add(Box.createHorizontalStrut(6));
-        mapRow.add(slotsPanel);
-        mapRow.add(Box.createHorizontalStrut(6));
-        mapRow.add(gateBWrap);
+        JPanel northRow = new JPanel();
+        northRow.setOpaque(false);
+        northRow.setLayout(new BoxLayout(northRow, BoxLayout.X_AXIS));
+        northRow.add(makeNorthCorner(sideTotalW, northH, laneW, /*asphaltOnRight=*/true,  cornerTopOffset));
+        northRow.add(makeTopGateSide("Gate C", laneH, labelStripH, gateGap));
+        northRow.add(makeNorthCorner(sideTotalW, northH, laneW, /*asphaltOnRight=*/false, cornerTopOffset));
 
-        // ── Gate C label centred above the grid
-        JLabel gateCLabel = gateLabel("Gate C");
-        gateCLabel.setHorizontalAlignment(SwingConstants.CENTER);
-        gateCLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
-        gateCLabel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 20));
+        JPanel southRow = new JPanel();
+        southRow.setOpaque(false);
+        southRow.setLayout(new BoxLayout(southRow, BoxLayout.X_AXIS));
+        southRow.add(makeSouthCorner(sideTotalW, laneH, laneW, /*asphaltOnRight=*/true));
+        southRow.add(makeRoadLane(laneH));
+        southRow.add(makeSouthCorner(sideTotalW, laneH, laneW, /*asphaltOnRight=*/false));
 
-        // ── Entrance / Exit driveway directly below the grid
+        lot.add(northRow,                                                      BorderLayout.NORTH);
+        lot.add(southRow,                                                      BorderLayout.SOUTH);
+        lot.add(makeSideGate("Gate A", laneW, labelStripW, gateGap, false),    BorderLayout.WEST);
+        lot.add(makeSideGate("Gate B", laneW, labelStripW, gateGap, true),     BorderLayout.EAST);
+        lot.add(slotsPanel,                                                    BorderLayout.CENTER);
+
+        // ── Entrance / Exit driveway directly below the framed lot
         JPanel driveBar = buildDriveBar();
         driveBar.setAlignmentX(Component.LEFT_ALIGNMENT);
 
@@ -193,9 +213,7 @@ public class DashboardPanel extends JPanel {
         centerWrapper.setOpaque(false);
         centerWrapper.setLayout(new BoxLayout(centerWrapper, BoxLayout.Y_AXIS));
         centerWrapper.add(Box.createVerticalGlue());
-        centerWrapper.add(gateCLabel);
-        centerWrapper.add(Box.createVerticalStrut(6));
-        centerWrapper.add(mapRow);
+        centerWrapper.add(lot);
         centerWrapper.add(driveBar);
         centerWrapper.add(Box.createVerticalGlue());
         card.add(centerWrapper, BorderLayout.CENTER);
@@ -226,19 +244,22 @@ public class DashboardPanel extends JPanel {
         return row;
     }
 
+    /** Horizontal road — asphalt with a dashed centre line. */
     private JPanel makeRoadLane(int height) {
         JPanel lane = new JPanel() {
             @Override
             protected void paintComponent(Graphics g) {
                 super.paintComponent(g);
                 Graphics2D g2 = (Graphics2D) g.create();
-                // asphalt surface
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
+                int w = getWidth(), h = getHeight();
                 g2.setColor(new Color(32, 35, 42));
-                g2.fillRect(0, 0, getWidth(), getHeight());
-                // dashed centre line
+                g2.fillRect(0, 0, w, h);
+
                 g2.setColor(new Color(210, 175, 0, 180));
-                int y = getHeight() / 2;
-                for (int x = 6; x < getWidth() - 6; x += 18) {
+                int y = h / 2;
+                for (int x = 6; x < w - 6; x += 18) {
                     g2.fillRect(x, y - 1, 10, 2);
                 }
                 g2.dispose();
@@ -247,6 +268,125 @@ public class DashboardPanel extends JPanel {
         lane.setPreferredSize(new Dimension(0, height));
         lane.setMaximumSize(new Dimension(Integer.MAX_VALUE, height));
         return lane;
+    }
+
+    /** Vertical road — asphalt with a vertical dashed centre line + horizontal T-junction at the midpoint. */
+    private JPanel makeVerticalRoadLane(int width) {
+        JPanel lane = new JPanel() {
+            @Override
+            protected void paintComponent(Graphics g) {
+                super.paintComponent(g);
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
+                int w = getWidth(), h = getHeight();
+                g2.setColor(new Color(32, 35, 42));
+                g2.fillRect(0, 0, w, h);
+
+                // Vertical dashed centerline, skipping the central-aisle band
+                int aisleHalfThk = 13;
+                int aisleY0 = h / 2 - aisleHalfThk;
+                int aisleY1 = h / 2 + aisleHalfThk;
+                int x = w / 2;
+                Color dashColor = new Color(210, 175, 0, 180);
+                g2.setColor(dashColor);
+                for (int yy = 6; yy < h - 6; yy += 18) {
+                    if (yy + 10 > aisleY0 && yy < aisleY1) continue;
+                    g2.fillRect(x - 1, yy, 2, 10);
+                }
+
+                // Horizontal dashed line at the central-aisle midpoint — T-intersection
+                g2.setColor(dashColor);
+                int yMid = h / 2;
+                for (int xx = 3; xx < w - 3; xx += 9) {
+                    int seg = Math.min(5, w - 3 - xx);
+                    if (seg <= 0) break;
+                    g2.fillRect(xx, yMid - 1, seg, 2);
+                }
+                g2.dispose();
+            }
+        };
+        lane.setPreferredSize(new Dimension(width, 0));
+        lane.setMaximumSize(new Dimension(width, Integer.MAX_VALUE));
+        return lane;
+    }
+
+    // ── Corner pieces (asphalt fill where side road meets top/bottom road) ───
+    /** NORTH-row corner: asphalt fills a laneW × laneH block at the inner edge, aligned with the road. */
+    private JPanel makeNorthCorner(int totalW, int totalH, int asphaltW, boolean asphaltOnRight, int topOffset) {
+        JPanel p = new JPanel() {
+            @Override
+            protected void paintComponent(Graphics g) {
+                super.paintComponent(g);
+                g.setColor(new Color(32, 35, 42));
+                int ax = asphaltOnRight ? (totalW - asphaltW) : 0;
+                g.fillRect(ax, topOffset, asphaltW, totalH - topOffset);
+            }
+        };
+        p.setOpaque(false);
+        p.setPreferredSize(new Dimension(totalW, totalH));
+        p.setMinimumSize  (new Dimension(totalW, totalH));
+        p.setMaximumSize  (new Dimension(totalW, totalH));
+        return p;
+    }
+
+    /** SOUTH-row corner: asphalt fills a laneW × laneH block at the inner edge, full row height. */
+    private JPanel makeSouthCorner(int totalW, int totalH, int asphaltW, boolean asphaltOnRight) {
+        JPanel p = new JPanel() {
+            @Override
+            protected void paintComponent(Graphics g) {
+                super.paintComponent(g);
+                g.setColor(new Color(32, 35, 42));
+                int ax = asphaltOnRight ? (totalW - asphaltW) : 0;
+                g.fillRect(ax, 0, asphaltW, totalH);
+            }
+        };
+        p.setOpaque(false);
+        p.setPreferredSize(new Dimension(totalW, totalH));
+        p.setMinimumSize  (new Dimension(totalW, totalH));
+        p.setMaximumSize  (new Dimension(totalW, totalH));
+        return p;
+    }
+
+    // ── Gate-label strip + composite "gate side" ─────────────────────────────
+    private JPanel makeLabelStrip(String gateText, int width, int height, boolean horizontalText) {
+        JPanel strip = new JPanel(new GridBagLayout());
+        strip.setBackground(UITheme.BG_CARD);
+        strip.setBorder(BorderFactory.createMatteBorder(0, 0, 0, 0, UITheme.BORDER));
+        if (width  > 0) { strip.setPreferredSize(new Dimension(width,  height)); strip.setMaximumSize(new Dimension(width, Integer.MAX_VALUE)); }
+        if (height > 0 && width == 0) { strip.setPreferredSize(new Dimension(0, height)); strip.setMaximumSize(new Dimension(Integer.MAX_VALUE, height)); }
+        strip.add(gateLabel(gateText));
+        return strip;
+    }
+
+    /** Top side: vertical stack of [label strip] + gap + [road with door]. Label sits above the road. */
+    private JPanel makeTopGateSide(String text, int roadH, int labelH, int gap) {
+        JPanel side = new JPanel();
+        side.setOpaque(false);
+        side.setLayout(new BoxLayout(side, BoxLayout.Y_AXIS));
+        side.add(makeLabelStrip(text, 0, labelH, true));
+        side.add(Box.createVerticalStrut(gap));
+        side.add(makeRoadLane(roadH));
+        return side;
+    }
+
+    /** Left/right side: horizontal stack of road + gap + label strip (order depends on labelOnRight). */
+    private JPanel makeSideGate(String text, int roadW, int labelW, int gap, boolean labelOnRight) {
+        JPanel side = new JPanel();
+        side.setOpaque(false);
+        side.setLayout(new BoxLayout(side, BoxLayout.X_AXIS));
+        JPanel road  = makeVerticalRoadLane(roadW);
+        JPanel label = makeLabelStrip(text, labelW, 0, false);
+        if (labelOnRight) {
+            side.add(road);
+            side.add(Box.createHorizontalStrut(gap));
+            side.add(label);
+        } else {
+            side.add(label);
+            side.add(Box.createHorizontalStrut(gap));
+            side.add(road);
+        }
+        return side;
     }
 
     /** Driveway bar: green dot ENTRANCE  ·  red dot EXIT — centred. */
@@ -305,19 +445,6 @@ public class DashboardPanel extends JPanel {
         l.setForeground(fg);
         chip.add(l);
         return chip;
-    }
-
-    private JPanel centreV(JLabel label, int fixedHeight) {
-        JPanel p = new JPanel();
-        p.setOpaque(false);
-        p.setLayout(new BoxLayout(p, BoxLayout.Y_AXIS));
-        p.setPreferredSize(new Dimension(58, fixedHeight));
-        p.setMaximumSize(new Dimension(58, fixedHeight));
-        p.add(Box.createVerticalGlue());
-        label.setAlignmentX(Component.CENTER_ALIGNMENT);
-        p.add(label);
-        p.add(Box.createVerticalGlue());
-        return p;
     }
 
     private void refreshMap() {
