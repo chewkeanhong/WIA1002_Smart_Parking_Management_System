@@ -53,8 +53,10 @@ public class GateProcessor {
 
     /** Returns true if a PROCESSED action for this plate exists in the undo stack. */
     public boolean wasApproved(String licensePlate) {
+        String normalizedPlate = Vehicle.normalizePlate(licensePlate);
         for (UndoStack.Action a : undoStack.toArray()) {
-            if ("PROCESSED".equals(a.type) && a.vehicle.getLicensePlate().equals(licensePlate)) {
+            if ("PROCESSED".equals(a.type)
+                    && Vehicle.normalizePlate(a.vehicle.getLicensePlate()).equals(normalizedPlate)) {
                 return true;
             }
         }

@@ -160,7 +160,7 @@ public class SearchPanel extends JPanel {
 
     // ── Search action ────────────────────────────────────────────────────────
     private void searchVehicle() {
-        String plate = tfSearch.getText().trim().toUpperCase();
+        String plate = Vehicle.normalizePlate(tfSearch.getText().trim());
         if (plate.isEmpty()) {
             resultLabel.setText("Enter a plate.");
             resultLabel.setForeground(UITheme.DANGER);

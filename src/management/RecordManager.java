@@ -84,8 +84,9 @@ public class RecordManager {
     }
 
     public Vehicle findVehicleByPlate(String plate) {
+        String normalizedPlate = Vehicle.normalizePlate(plate);
         for (Vehicle v : vehicleRecords.toList())
-            if (v.getLicensePlate().equalsIgnoreCase(plate)) return v;
+            if (Vehicle.normalizePlate(v.getLicensePlate()).equals(normalizedPlate)) return v;
         return null;
     }
 

@@ -21,13 +21,13 @@ public class MainFrame extends JFrame {
         { "User",         "User",         "👤" },
     };
 
-    private final CardLayout    cardLayout  = new CardLayout();
-    private final JPanel        contentArea = new JPanel(cardLayout);
-    private final JButton[]     navBtns     = new JButton[NAV.length];
-    private final ActivityLog   log         = new ActivityLog();
-    private final GateProcessor gate        = new GateProcessor();
-    private final ParkingMap    parkingMap  = new ParkingMap();
-    private final RecordManager records     = new RecordManager();
+    private final CardLayout cardLayout;
+    private final JPanel contentArea;
+    private final JButton[] navBtns;
+    private final ActivityLog log;
+    private final GateProcessor gate;
+    private final ParkingMap parkingMap;
+    private final RecordManager records;
 
     // Panels
     private DashboardPanel   dashboardPanel;
@@ -41,8 +41,19 @@ public class MainFrame extends JFrame {
 
 
     public MainFrame() {
+        this(new GateProcessor(), new ActivityLog());
+    }
+
+    public MainFrame(GateProcessor gate, ActivityLog log) {
         super("SmartPark");
         UITheme.applyGlobalDefaults();
+        this.gate = gate;
+        this.log = log;
+        this.parkingMap = new ParkingMap();
+        this.records = new RecordManager();
+        this.cardLayout = new CardLayout();
+        this.contentArea = new JPanel(cardLayout);
+        this.navBtns = new JButton[NAV.length];
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setSize(1320, 860);
         setMinimumSize(new Dimension(1060, 680));
@@ -66,7 +77,7 @@ public class MainFrame extends JFrame {
 
         dashboardPanel   = new DashboardPanel(log, parkingMap);
         gateControlPanel = new GateControlPanel(log, gate);
-        assignmentPanel  = new AssignmentPanel(log);
+        assignmentPanel  = new AssignmentPanel(log, records, parkingMap);
         searchPanel      = new SearchPanel(log, records);
         navigationPanel  = new NavigationPanel(log, records, parkingMap);
         logsPanel        = new LogsPanel(log);

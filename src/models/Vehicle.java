@@ -2,17 +2,31 @@ package models;
 
 public class Vehicle {
 
+    public static String normalizePlate(String plate) {
+        if (plate == null) {
+            return null;
+        }
+        return plate.replaceAll("\\s+", "").toUpperCase();
+    }
+
 
     private String licensePlate;
     private String ownerName;
     private long entryTime;
     private String assignedSlotId;
+    private String preferredGateId;
 
 
     public Vehicle(String licensePlate, String ownerName, long entryTime) {
-        this.licensePlate = licensePlate;
+        this.licensePlate = normalizePlate(licensePlate);
         this.ownerName = ownerName;
         this.entryTime = entryTime;
+    }
+
+
+    public Vehicle(String licensePlate, String ownerName, long entryTime, String preferredGateId) {
+        this(licensePlate, ownerName, entryTime);
+        this.preferredGateId = preferredGateId;
     }
 
 
@@ -22,7 +36,7 @@ public class Vehicle {
 
 
     public void setLicensePlate(String licensePlate) {
-        this.licensePlate = licensePlate;
+        this.licensePlate = normalizePlate(licensePlate);
     }
 
 
@@ -56,9 +70,20 @@ public class Vehicle {
     }
 
 
+    public String getPreferredGateId() {
+        return preferredGateId;
+    }
+
+
+    public void setPreferredGateId(String preferredGateId) {
+        this.preferredGateId = preferredGateId;
+    }
+
+
     public String toString() {
         return "Vehicle: " + licensePlate + " | Owner: " + ownerName + " | Entry Time: " + entryTime
-                + " | Assigned Slot: " + assignedSlotId;
+                + " | Assigned Slot: " + assignedSlotId
+                + (preferredGateId == null ? "" : " | Preferred Gate: " + preferredGateId);
     }
 
 

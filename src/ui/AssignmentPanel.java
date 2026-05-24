@@ -1,13 +1,19 @@
 package ui;
 
 import assignment.PriorityAllocator;
+import management.RecordManager;
 import models.ParkingSlot;
+import models.ParkingMap;
 import models.Vehicle;
+import navigation.DijkstraPathfinder;
+import navigation.RouteGraph;
 
 import javax.swing.*;
 import javax.swing.border.*;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Module 3 — Parking Slot Assignment
@@ -16,13 +22,20 @@ import java.awt.*;
  */
 public class AssignmentPanel extends JPanel {
 
+    private static final String DEFAULT_ACCESS_NODE = "ENTRANCE";
+
     private final ActivityLog      log;
+    private final RecordManager    records;
+    private final ParkingMap       parkingMap;
     private final PriorityAllocator allocator = new PriorityAllocator();
+    private final RouteGraph       routeGraph = new RouteGraph();
+    private final List<ParkingSlot> registeredSlots = new ArrayList<>();
 
     // Assign vehicle form
     private JTextField tfVPlate, tfVOwner;
     // Add slot form
-    private JTextField tfSlotId, tfDist;
+    private JTextField tfSlotId;
+    private JComboBox<String> gateChoice;
 
     private JLabel statusLabel;
     private JLabel resultLabel;
@@ -32,7 +45,7 @@ public class AssignmentPanel extends JPanel {
 
     // Slot table
     private final DefaultTableModel heapTableModel = new DefaultTableModel(
-        new String[]{"Heap Pos", "Slot ID", "Distance (m)", "Status"}, 0) {
+        new String[]{"Heap Pos", "Slot ID", "Route Cost (m)", "Status"}, 0) {
         public boolean isCellEditable(int r, int c) { return false; }
     };
 
@@ -44,7 +57,14 @@ public class AssignmentPanel extends JPanel {
     };
 
     public AssignmentPanel(ActivityLog log) {
+        this(log, null, null);
+    }
+
+    public AssignmentPanel(ActivityLog log, RecordManager records, ParkingMap parkingMap) {
         this.log = log;
+        this.records = records;
+        this.parkingMap = parkingMap;
+        routeGraph.initializeDashboardLayout();
         setBackground(UITheme.BG_DARK);
         setLayout(new BorderLayout(0, 16));
         setBorder(new EmptyBorder(28, 28, 28, 28));
@@ -62,7 +82,7 @@ public class AssignmentPanel extends JPanel {
         JPanel left = new JPanel(new GridLayout(2, 1, 0, 2));
         left.setOpaque(false);
         left.add(UITheme.makeSectionTitle("Parking Slot Assignment"));
-        left.add(UITheme.makeLabel("Data Structure: Binary Min-Heap (Priority Queue)  ·  nearest slot in O(log n)"));
+        left.add(UITheme.makeLabel("Gate-aware shortest route + Binary Min-Heap  ·  nearest slot in O(log n)"));
 
         statusLabel = new JLabel(" ");
         statusLabel.setFont(UITheme.FONT_SMALL);
@@ -100,7 +120,6 @@ public class AssignmentPanel extends JPanel {
         gc.insets = new Insets(3, 3, 3, 3);
 
         tfSlotId = UITheme.makeTextField(10);
-        tfDist   = UITheme.makeTextField(10);
 
         gc.gridx = 0; gc.gridy = 0; gc.weightx = 0;
         form.add(UITheme.makeLabel("Slot ID"), gc);
@@ -108,9 +127,9 @@ public class AssignmentPanel extends JPanel {
         form.add(tfSlotId, gc);
 
         gc.gridx = 0; gc.gridy = 1; gc.weightx = 0;
-        form.add(UITheme.makeLabel("Distance to Gate (m)"), gc);
+        form.add(UITheme.makeLabel("Register Slot"), gc);
         gc.gridx = 1; gc.weightx = 1;
-        form.add(tfDist, gc);
+        form.add(UITheme.makeLabel("Will be scored from the selected gate"), gc);
 
         JButton addBtn = UITheme.makePrimaryButton("Add to Heap");
         addBtn.addActionListener(e -> addSlot());
@@ -134,6 +153,12 @@ public class AssignmentPanel extends JPanel {
 
         tfVPlate = UITheme.makeTextField(10);
         tfVOwner = UITheme.makeTextField(10);
+        gateChoice = new JComboBox<>(new String[] {
+            "Nearest Entrance", "Gate A", "Gate B", "Gate C"
+        });
+        gateChoice.setBackground(UITheme.BG_INPUT);
+        gateChoice.setForeground(UITheme.TEXT_PRIMARY);
+        gateChoice.addActionListener(e -> refreshHeapForGate());
 
         ag.gridx = 0; ag.gridy = 0; ag.weightx = 0;
         aForm.add(UITheme.makeLabel("Licence Plate"), ag);
@@ -145,12 +170,17 @@ public class AssignmentPanel extends JPanel {
         ag.gridx = 1; ag.weightx = 1;
         aForm.add(tfVOwner, ag);
 
+        ag.gridx = 0; ag.gridy = 2; ag.weightx = 0;
+        aForm.add(UITheme.makeLabel("Choose Gate"), ag);
+        ag.gridx = 1; ag.weightx = 1;
+        aForm.add(gateChoice, ag);
+
         JButton assignBtn = UITheme.makeButton("Assign Nearest Slot →", new Color(120, 60, 0));
         assignBtn.setForeground(UITheme.WARNING);
         assignBtn.setFont(new Font("Segoe UI", Font.BOLD, 13));
         assignBtn.addActionListener(e -> assignSlot());
 
-        ag.gridx = 0; ag.gridy = 2; ag.gridwidth = 2;
+        ag.gridx = 0; ag.gridy = 3; ag.gridwidth = 2;
         aForm.add(assignBtn, ag);
 
         resultLabel = new JLabel(" ");
@@ -228,35 +258,174 @@ public class AssignmentPanel extends JPanel {
     // ── Actions ───────────────────────────────────────────────────────────────
     private void addSlot() {
         String id = tfSlotId.getText().trim().toUpperCase();
-        String ds = tfDist.getText().trim();
-        if (id.isEmpty() || ds.isEmpty()) { status("Fill both fields.", UITheme.DANGER); return; }
-        int dist;
-        try { dist = Integer.parseInt(ds); } catch (NumberFormatException ex) {
-            status("Distance must be a number.", UITheme.DANGER); return;
+        if (id.isEmpty()) { status("Enter a slot ID.", UITheme.DANGER); return; }
+        if (routeGraph.getNode(id) == null) { status("Slot ID must exist on the dashboard map.", UITheme.DANGER); return; }
+
+        ParkingSlot slot = findRegisteredSlot(id);
+        RouteGraph.Node node = routeGraph.getNode(id);
+        if ((slot != null && slot.isOccupied()) || (node != null && node.isOccupied)) {
+            status("Slot " + id + " is currently occupied and cannot be added to the heap.", UITheme.DANGER);
+            return;
         }
-        ParkingSlot slot = new ParkingSlot(id, dist);
-        allocator.addSlot(slot);
-        log.log("HEAP  Inserted slot " + id + " (dist=" + dist + "m) — O(log n)");
-        status("Slot " + id + " inserted into heap — O(log n).", UITheme.SUCCESS);
-        tfSlotId.setText(""); tfDist.setText("");
-        refreshHeap();
+
+        if (slot == null) {
+            slot = new ParkingSlot(id, 0);
+            registeredSlots.add(slot);
+        }
+        slot.setOccupied(false);
+
+        refreshHeapForGate();
+        log.log("HEAP  Registered slot " + id + " for gate-aware assignment — O(log n)");
+        status("Slot " + id + " registered. Heap will score it from the selected gate.", UITheme.SUCCESS);
+        tfSlotId.setText("");
     }
 
     private void assignSlot() {
         String plate = tfVPlate.getText().trim().toUpperCase();
         String owner = tfVOwner.getText().trim();
         if (plate.isEmpty() || owner.isEmpty()) { status("Fill vehicle fields.", UITheme.DANGER); return; }
-        if (!allocator.hasAvailableSlots()) { status("No available slots in heap.", UITheme.WARNING); return; }
 
-        Vehicle v = new Vehicle(plate, owner, System.currentTimeMillis());
-        ParkingSlot best = allocator.assignBestSlot(v);
+        String gateNode = normalizeGate((String) gateChoice.getSelectedItem());
+        Vehicle existing = records == null ? null : records.findVehicleByPlate(plate);
+        String oldSlotId = existing == null ? null : existing.getAssignedSlotId();
+
+        refreshHeapForGate();
+        if (!allocator.hasAvailableSlots()) { status("No available slots for the selected gate.", UITheme.WARNING); return; }
+
+        int currentCost = Integer.MAX_VALUE;
+        if (oldSlotId != null) {
+            currentCost = computeRouteCost(gateNode, oldSlotId);
+        }
+
+        Vehicle v = existing != null ? existing : new Vehicle(plate, owner, System.currentTimeMillis());
+        v.setOwnerName(owner);
+        v.setPreferredGateId(gateNode);
+        ParkingSlot best = allocator.peekBestSlot();
+        if (best == null) {
+            status("No available slots for the selected gate.", UITheme.WARNING);
+            return;
+        }
+
+        int candidateCost = best.getDistanceToGate();
+        if (existing != null && oldSlotId != null && candidateCost >= currentCost) {
+            status("Current slot " + oldSlotId + " is already nearer or equal to " + prettyGate(gateNode) + ". No change made.", UITheme.WARNING);
+            resultLabel.setText("✓  " + plate + "  remains at slot " + oldSlotId +
+                                "  (current route: " + currentCost + " m, candidate: " + candidateCost + " m)");
+            refreshHeap();
+            return;
+        }
+
+        best = allocator.assignBestSlot(v);
+        if (best == null) {
+            status("No available slots for the selected gate.", UITheme.WARNING);
+            return;
+        }
+
+        ParkingSlot oldSlot = oldSlotId == null ? null : findRegisteredSlot(oldSlotId);
+        if (oldSlotId != null) {
+            if (parkingMap != null) {
+                parkingMap.markFree(oldSlotId);
+            }
+            routeGraph.setOccupancy(oldSlotId, false);
+        }
+        if (oldSlot != null) {
+            oldSlot.setParkedVehicle(null);
+        }
+
+        if (records != null && existing == null) {
+            records.addVehicleRecord(v);
+        }
+
+        if (parkingMap != null) {
+            parkingMap.markOccupied(best.getSlotId());
+        }
+        routeGraph.setOccupancy(best.getSlotId(), true);
+
+        String priorText = oldSlotId == null ? "" : " (reassigned from " + oldSlotId + ")";
         log.log("HEAP  Assigned slot " + best.getSlotId() + " (dist=" + best.getDistanceToGate() +
-                "m) to " + plate + " — extract-min O(log n)");
-        status("Assigned: " + best.getSlotId() + " — O(log n).", UITheme.SUCCESS);
+                "m) to " + plate + " from " + prettyGate(gateNode) + priorText + " — extract-min O(log n)");
+        status((existing == null ? "Assigned: " : "Reassigned: ") + best.getSlotId() + " from " + prettyGate(gateNode) + " — O(log n).", UITheme.SUCCESS);
         resultLabel.setText("✓  " + plate + "  →  Slot " + best.getSlotId() +
-                            "  (dist: " + best.getDistanceToGate() + " m)");
+                            "  (route: " + best.getDistanceToGate() + " m, from " + prettyGate(gateNode) +
+                            (oldSlotId == null ? "" : ", reassigned from " + oldSlotId) + ")");
         tfVPlate.setText(""); tfVOwner.setText("");
         refreshHeap();
+    }
+
+    private void refreshHeapForGate() {
+        allocator.clearSlots();
+        String gateNode = normalizeGate((String) gateChoice.getSelectedItem());
+        for (ParkingSlot slot : registeredSlots) {
+            if (!slot.isOccupied()) {
+                int routeCost = computeRouteCost(gateNode, slot.getSlotId());
+                slot.setDistanceToGate(routeCost);
+                allocator.addSlot(slot);
+            }
+        }
+        refreshHeap();
+    }
+
+    private int computeRouteCost(String gateNode, String slotId) {
+        List<String> path = DijkstraPathfinder.findShortestPath(routeGraph, gateNode, slotId);
+        if (path.isEmpty()) {
+            return Integer.MAX_VALUE;
+        }
+
+        double total = 0.0;
+        for (int i = 0; i < path.size() - 1; i++) {
+            RouteGraph.Node from = routeGraph.getNode(path.get(i));
+            RouteGraph.Node to = routeGraph.getNode(path.get(i + 1));
+            if (from == null || to == null) {
+                return Integer.MAX_VALUE;
+            }
+
+            boolean found = false;
+            for (RouteGraph.Edge edge : routeGraph.getNeighbors(from.id)) {
+                if (edge.target.id.equals(to.id)) {
+                    total += edge.weight;
+                    found = true;
+                    break;
+                }
+            }
+            if (!found) {
+                return Integer.MAX_VALUE;
+            }
+        }
+
+        return (int) Math.round(total);
+    }
+
+    private ParkingSlot findRegisteredSlot(String slotId) {
+        for (ParkingSlot slot : registeredSlots) {
+            if (slot.getSlotId().equalsIgnoreCase(slotId)) {
+                return slot;
+            }
+        }
+        return null;
+    }
+
+    private String normalizeGate(String selection) {
+        if (selection == null) {
+            return DEFAULT_ACCESS_NODE;
+        }
+        switch (selection) {
+            case "Gate A": return "GATE_A";
+            case "Gate B": return "GATE_B";
+            case "Gate C": return "GATE_C";
+            default: return DEFAULT_ACCESS_NODE;
+        }
+    }
+
+    private String prettyGate(String gateNode) {
+        if (gateNode == null) {
+            return "Nearest Entrance";
+        }
+        switch (gateNode) {
+            case "GATE_A": return "Gate A";
+            case "GATE_B": return "Gate B";
+            case "GATE_C": return "Gate C";
+            default: return "Nearest Entrance";
+        }
     }
 
     private void refreshHeap() {

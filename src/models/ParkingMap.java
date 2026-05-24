@@ -27,6 +27,12 @@ public class ParkingMap {
     public void markOccupied(String id) { int i = idx(id); if (i >= 0) occupied[i] = true;  }
     public void markFree    (String id) { int i = idx(id); if (i >= 0) occupied[i] = false; }
 
+    public void clearOccupancy() {
+        for (int i = 0; i < occupied.length; i++) {
+            occupied[i] = false;
+        }
+    }
+
     public boolean isOccupied(int i) { return i >= 0 && i < TOTAL && occupied[i]; }
 
     /** Returns the slot ID of the first free bay, or null if the lot is full. */

@@ -23,6 +23,8 @@ import java.util.Map;
  */
 public class NavigationPanel extends JPanel {
 
+    private static final String DEFAULT_ACCESS_NODE = "ENTRANCE";
+
     private final ActivityLog   log;
     private final RecordManager records;
     private final ParkingMap    parkingMap;
@@ -34,9 +36,11 @@ public class NavigationPanel extends JPanel {
     private final Map<String, JPanel> bubblesByPlate = new HashMap<>();
 
     private List<String>         currentPath = new ArrayList<>();
+    private List<String>         entranceToSlotPath = new ArrayList<>();
     private String               lastVehicleSignature = "";
     private String               routedPlate = null;
     private String               routedSlot  = null;
+    private String               routedStartNode = DEFAULT_ACCESS_NODE;
     private String               lastDirections = "";
 
     public NavigationPanel(ActivityLog log, RecordManager records, ParkingMap parkingMap) {
@@ -120,12 +124,18 @@ public class NavigationPanel extends JPanel {
     private void rebuildBubbles() {
         bubbleContainer.removeAll();
         bubblesByPlate.clear();
+        parkingMap.clearOccupancy();
+        graph.clearOccupancy();
 
         List<Vehicle> vs = records.getAllVehiclesList();
         if (vs.isEmpty()) {
             bubbleContainer.add(buildPlaceholderBubble());
         } else {
             for (Vehicle v : vs) {
+                if (v.getAssignedSlotId() != null) {
+                    parkingMap.markOccupied(v.getAssignedSlotId());
+                    graph.setOccupancy(v.getAssignedSlotId(), true);
+                }
                 JPanel b = buildVehicleBubble(v);
                 bubblesByPlate.put(v.getLicensePlate(), b);
                 bubbleContainer.add(b);
@@ -212,13 +222,15 @@ public class NavigationPanel extends JPanel {
 
     // ── Click → route ────────────────────────────────────────────────────────
     private void selectVehicle(Vehicle v) {
+        String startNode = resolveStartNode(v.getPreferredGateId());
+        routedStartNode = startNode;
+
         String slotId = v.getAssignedSlotId();
         if (slotId == null) {
-            slotId = parkingMap.findFirstFree();
+            slotId = assignNearestSlot(v);
             if (slotId == null) { status("Lot is full — no free slot to route to.", UITheme.DANGER); return; }
-            parkingMap.markOccupied(slotId);
-            v.setAssignedSlotId(slotId);
-            log.log("NAV  Auto-assigned " + slotId + " to " + v.getLicensePlate());
+            log.log("NAV  Auto-assigned " + slotId + " to " + v.getLicensePlate() +
+                    " via " + prettyAccessPoint(startNode));
         }
 
         String norm = slotId.trim().toUpperCase();
@@ -228,7 +240,8 @@ public class NavigationPanel extends JPanel {
         }
 
         long t0 = System.nanoTime();
-        currentPath = DijkstraPathfinder.findShortestPath(graph, "ENTRANCE", norm);
+        entranceToSlotPath = DijkstraPathfinder.findShortestPath(graph, "ENTRANCE", norm);
+        currentPath = buildFullRoutePath(norm);
         long us = (System.nanoTime() - t0) / 1000;
 
         if (currentPath.isEmpty()) {
@@ -236,18 +249,56 @@ public class NavigationPanel extends JPanel {
             return;
         }
 
-        parkingMap.markOccupied(norm);
         routedPlate    = v.getLicensePlate();
         routedSlot     = norm;
         lastDirections = buildDirections(currentPath);
 
         status("Route to " + norm + "  (" + (currentPath.size() - 1) + " hops · " + us + " µs)",
                UITheme.SUCCESS);
-        log.log("NAV  Dijkstra ENTRANCE → " + norm + " for " + v.getLicensePlate()
+           log.log("NAV  Dijkstra ENTRANCE → " + norm + " via " + prettyAccessPoint(startNode) + " for " + v.getLicensePlate()
               + "  (" + (currentPath.size() - 1) + " hops, " + us + " µs)");
 
         applySelectionBorders();
         canvas.repaint();
+    }
+
+    private String resolveStartNode(String preferredGateId) {
+        if (preferredGateId == null) {
+            return DEFAULT_ACCESS_NODE;
+        }
+
+        String normalized = preferredGateId.trim().toUpperCase();
+        if (normalized.isEmpty()) {
+            return DEFAULT_ACCESS_NODE;
+        }
+
+        switch (normalized) {
+            case "ENTRANCE":
+            case "GATE_A":
+            case "GATE_B":
+            case "GATE_C":
+                return normalized;
+            default:
+                return DEFAULT_ACCESS_NODE;
+        }
+    }
+
+    private String assignNearestSlot(Vehicle vehicle) {
+        if (parkingMap == null || graph == null || vehicle == null) {
+            return null;
+        }
+
+        String startNode = resolveStartNode(vehicle.getPreferredGateId());
+        List<String> path = DijkstraPathfinder.findShortestPathToAvailableSpot(graph, startNode);
+        if (path.isEmpty()) {
+            return null;
+        }
+
+        String slotId = path.get(path.size() - 1);
+        parkingMap.markOccupied(slotId);
+        graph.setOccupancy(slotId, true);
+        vehicle.setAssignedSlotId(slotId);
+        return slotId;
     }
 
     // ── Auto-sync (1 s tick) ─────────────────────────────────────────────────
@@ -291,7 +342,9 @@ public class NavigationPanel extends JPanel {
         if (path.size() < 2) return "Already at destination.";
         StringBuilder sb = new StringBuilder();
         int step = 1;
-        sb.append(step++).append(". Depart ENTRANCE.\n");
+        sb.append(step++).append(". Depart ENTRANCE.").append('\n');
+
+        sb.append(step++).append(". Follow the blue route to your assigned parking slot.").append('\n');
 
         String lastFamily = "";
         for (int i = 1; i < path.size() - 1; i++) {
@@ -305,6 +358,23 @@ public class NavigationPanel extends JPanel {
         }
         sb.append(step).append(". Arrive at ").append(path.get(path.size() - 1)).append('.');
         return sb.toString();
+    }
+
+    private List<String> buildFullRoutePath(String slotId) {
+        return DijkstraPathfinder.findShortestPath(graph, "ENTRANCE", slotId);
+    }
+
+    private String prettyAccessPoint(String nodeId) {
+        if (nodeId == null) {
+            return "Nearest Entrance";
+        }
+
+        switch (nodeId) {
+            case "GATE_A": return "Gate A";
+            case "GATE_B": return "Gate B";
+            case "GATE_C": return "Gate C";
+            default: return "Nearest Entrance";
+        }
     }
 
     private String familyOf(String id) {
@@ -498,26 +568,72 @@ public class NavigationPanel extends JPanel {
         }
 
         private void drawPath(Graphics2D g, double s, double ox, double oy) {
-            int[] xs = new int[currentPath.size()];
-            int[] ys = new int[currentPath.size()];
-            for (int i = 0; i < currentPath.size(); i++) {
-                RouteGraph.Node n = graph.getNode(currentPath.get(i));
+            drawColoredPath(g, entranceToSlotPath, s, ox, oy, new Color(59, 130, 246), -5.0);
+        }
+
+        private void drawColoredPath(Graphics2D g, List<String> path, double s, double ox, double oy,
+                                     Color color, double offsetPx) {
+            if (path == null || path.size() < 2) {
+                return;
+            }
+
+            double[] xs = new double[path.size()];
+            double[] ys = new double[path.size()];
+            for (int i = 0; i < path.size(); i++) {
+                RouteGraph.Node n = graph.getNode(path.get(i));
                 if (n == null) { xs[i] = ys[i] = 0; continue; }
                 xs[i] = toCanvas(n.x, s, ox);
                 ys[i] = toCanvas(n.y, s, oy);
             }
+
+            int[] drawX = new int[path.size()];
+            int[] drawY = new int[path.size()];
+            for (int i = 0; i < path.size(); i++) {
+                double nx = 0.0;
+                double ny = 0.0;
+
+                if (i > 0) {
+                    double dx = xs[i] - xs[i - 1];
+                    double dy = ys[i] - ys[i - 1];
+                    double len = Math.hypot(dx, dy);
+                    if (len > 0.0) {
+                        nx += -dy / len;
+                        ny +=  dx / len;
+                    }
+                }
+
+                if (i < path.size() - 1) {
+                    double dx = xs[i + 1] - xs[i];
+                    double dy = ys[i + 1] - ys[i];
+                    double len = Math.hypot(dx, dy);
+                    if (len > 0.0) {
+                        nx += -dy / len;
+                        ny +=  dx / len;
+                    }
+                }
+
+                double len = Math.hypot(nx, ny);
+                if (len > 0.0) {
+                    nx = (nx / len) * offsetPx;
+                    ny = (ny / len) * offsetPx;
+                }
+
+                drawX[i] = (int) Math.round(xs[i] + nx);
+                drawY[i] = (int) Math.round(ys[i] + ny);
+            }
+
             g.setColor(new Color(0, 0, 0, 130));
             g.setStroke(new BasicStroke((float)Math.max(7, 8*s),
                 BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
-            g.drawPolyline(xs, ys, xs.length);
-            g.setColor(new Color(59, 130, 246));
+            g.drawPolyline(drawX, drawY, drawX.length);
+            g.setColor(color);
             g.setStroke(new BasicStroke((float)Math.max(4, 5*s),
                 BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
-            g.drawPolyline(xs, ys, xs.length);
-            g.setColor(new Color(147, 197, 253));
+            g.drawPolyline(drawX, drawY, drawX.length);
+            g.setColor(color.brighter());
             g.setStroke(new BasicStroke((float)Math.max(1.5, 1.8*s),
                 BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
-            g.drawPolyline(xs, ys, xs.length);
+            g.drawPolyline(drawX, drawY, drawX.length);
         }
 
         private void drawPin(Graphics2D g, String label, double lx, double ly, Color color,

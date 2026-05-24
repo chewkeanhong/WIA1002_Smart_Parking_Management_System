@@ -302,4 +302,12 @@ public class RouteGraph {
             nodes.get(id).isOccupied = isOccupied;
         }
     }
+
+    public void clearOccupancy() {
+        for (Node node : nodes.values()) {
+            if (node.isParkingSlot) {
+                node.isOccupied = false;
+            }
+        }
+    }
 }
