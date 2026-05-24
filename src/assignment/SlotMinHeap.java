@@ -34,6 +34,11 @@ public class SlotMinHeap {
     public boolean isEmpty()     { return size == 0; }
     public int     getSize()     { return size; }
 
+    public void clear() {
+        heap = new ParkingSlot[64];
+        size = 0;
+    }
+
     /** Snapshot of current heap array in heap-index order (for visualisation). */
     public ParkingSlot[] toArray() {
         ParkingSlot[] arr = new ParkingSlot[size];

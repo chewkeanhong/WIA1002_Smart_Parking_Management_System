@@ -13,6 +13,8 @@ public class PriorityAllocator {
 
     public PriorityAllocator() { heap = new SlotMinHeap(); }
 
+    public void clearSlots() { heap.clear(); }
+
     /** Add an unoccupied slot into the priority queue. */
     public void addSlot(ParkingSlot slot) {
         if (!slot.isOccupied()) heap.insert(slot);
