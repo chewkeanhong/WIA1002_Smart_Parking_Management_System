@@ -2,14 +2,6 @@ package models;
 
 public class Vehicle {
 
-    public static String normalizePlate(String plate) {
-        if (plate == null) {
-            return null;
-        }
-        return plate.replaceAll("\\s+", "").toUpperCase();
-    }
-
-
     private String licensePlate;
     private String ownerName;
     private long entryTime;
@@ -84,6 +76,13 @@ public class Vehicle {
         return "Vehicle: " + licensePlate + " | Owner: " + ownerName + " | Entry Time: " + entryTime
                 + " | Assigned Slot: " + assignedSlotId
                 + (preferredGateId == null ? "" : " | Preferred Gate: " + preferredGateId);
+    }
+
+     public static String normalizePlate(String plate) {
+        if (plate == null) {
+            return null;
+        }
+        return plate.replaceAll("\\s+", "").toUpperCase();
     }
 
 
