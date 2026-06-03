@@ -42,6 +42,7 @@ public class AssignmentPanel extends JPanel {
 
     // Heap visualiser panel
     private JPanel heapCanvas;
+    private JComboBox<String> heapGateChoice;
 
     // Slot table
     private final DefaultTableModel heapTableModel = new DefaultTableModel(
@@ -158,7 +159,7 @@ public class AssignmentPanel extends JPanel {
         });
         gateChoice.setBackground(UITheme.BG_INPUT);
         gateChoice.setForeground(UITheme.TEXT_PRIMARY);
-        gateChoice.addActionListener(e -> refreshHeapForGate());
+
 
         ag.gridx = 0; ag.gridy = 0; ag.weightx = 0;
         aForm.add(UITheme.makeLabel("Licence Plate"), ag);
@@ -202,8 +203,22 @@ public class AssignmentPanel extends JPanel {
 
         // Heap visualiser
         JPanel heapCard = UITheme.makeCard(new BorderLayout(0, 8));
-        heapCard.add(UITheme.makeSectionHeader("Min-Heap State", "smallest dist = root", UITheme.ACCENT),
-                     BorderLayout.NORTH);
+
+        heapGateChoice = new JComboBox<>(new String[]{"Nearest Entrance", "Gate A", "Gate B", "Gate C"});
+        heapGateChoice.setBackground(UITheme.BG_INPUT);
+        heapGateChoice.setForeground(UITheme.TEXT_PRIMARY);
+        heapGateChoice.addActionListener(e -> refreshHeapForGate());
+
+        JPanel gateRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 2));
+        gateRow.setOpaque(false);
+        gateRow.add(UITheme.makeLabel("Gate:"));
+        gateRow.add(heapGateChoice);
+
+        JPanel heapNorth = new JPanel(new BorderLayout(0, 4));
+        heapNorth.setOpaque(false);
+        heapNorth.add(UITheme.makeSectionHeader("Min-Heap State", "smallest dist = root", UITheme.ACCENT), BorderLayout.NORTH);
+        heapNorth.add(gateRow, BorderLayout.SOUTH);
+        heapCard.add(heapNorth, BorderLayout.NORTH);
 
         heapCanvas = new JPanel() {
             @Override
@@ -240,8 +255,8 @@ public class AssignmentPanel extends JPanel {
         cmpTable.getColumnModel().getColumn(0).setMinWidth(100);
         cmpTable.getColumnModel().getColumn(1).setPreferredWidth(70);
         cmpTable.getColumnModel().getColumn(1).setMinWidth(60);
-        cmpTable.getColumnModel().getColumn(2).setPreferredWidth(90);
-        cmpTable.getColumnModel().getColumn(2).setMinWidth(80);
+        cmpTable.getColumnModel().getColumn(2).setPreferredWidth(180);
+        cmpTable.getColumnModel().getColumn(2).setMinWidth(160);
         cmpTable.getColumnModel().getColumn(3).setPreferredWidth(420);
         cmpTable.getColumnModel().getColumn(3).setMinWidth(360);
         cmpCard.add(UITheme.wrapScroll(cmpTable), BorderLayout.CENTER);
@@ -376,7 +391,7 @@ public class AssignmentPanel extends JPanel {
 
     private void refreshHeapForGate() {
         allocator.clearSlots();
-        String gateNode = normalizeGate((String) gateChoice.getSelectedItem());
+        String gateNode = normalizeGate((String) heapGateChoice.getSelectedItem());
         for (ParkingSlot slot : registeredSlots) {
             if (!slot.isOccupied()) {
                 int routeCost = computeRouteCost(gateNode, slot.getSlotId());

@@ -129,7 +129,7 @@ public class UserPanel extends JPanel {
         title.setBounds(12, 10, 140, 18);
 
         JButton closeBtn = makeXBtn(UITheme.BG_CARD);
-        closeBtn.setBounds(204, 4, 28, 28);
+        closeBtn.setBounds(200, 2, 32, 32);
         closeBtn.addActionListener(e -> removeBubble(bubble));
 
         JLabel plateLabel = UITheme.makeLabel("Vehicle Plate");
@@ -188,7 +188,7 @@ public class UserPanel extends JPanel {
         title.setBounds(12, 10, 140, 18);
 
         JButton closeBtn = makeXBtn(UITheme.BG_CARD);
-        closeBtn.setBounds(204, 4, 28, 28);
+        closeBtn.setBounds(200, 2, 32, 32);
         closeBtn.addActionListener(e -> removeBubble(bubble));
 
         JLabel badge = UITheme.makeBadge("⏳  PENDING", UITheme.WARNING);
@@ -242,7 +242,7 @@ public class UserPanel extends JPanel {
 
         JButton closeBtn = makeXBtn(new Color(18, 46, 26));
         closeBtn.setForeground(new Color(100, 180, 110));
-        closeBtn.setBounds(204, 4, 28, 28);
+        closeBtn.setBounds(200, 2, 32, 32);
         closeBtn.addActionListener(e -> removeBubble(bubble));
 
         JLabel badge = UITheme.makeBadge("✓  APPROVED", UITheme.SUCCESS);
@@ -590,14 +590,36 @@ public class UserPanel extends JPanel {
     }
 
     private JButton makeXBtn(Color bg) {
-        JButton b = new JButton("×");
-        b.setFont(new Font("Segoe UI", Font.BOLD, 14));
-        b.setForeground(UITheme.TEXT_SECONDARY);
+        JButton b = new JButton("X") {
+            @Override
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                g2.setColor(getBackground());
+                g2.fillRect(0, 0, getWidth(), getHeight());
+                g2.setColor(getForeground());
+                g2.setFont(getFont());
+                FontMetrics fm = g2.getFontMetrics();
+                String text = getText();
+                int tx = (getWidth()  - fm.stringWidth(text)) / 2;
+                int ty = (getHeight() - fm.getHeight()) / 2 + fm.getAscent();
+                g2.drawString(text, tx, ty);
+                g2.dispose();
+            }
+        };
+        b.setFont(new Font("Arial", Font.BOLD, 16));
+        b.setForeground(new Color(220, 60, 60));
         b.setBackground(bg);
         b.setBorderPainted(false);
         b.setFocusPainted(false);
+        b.setContentAreaFilled(false);
         b.setOpaque(true);
+        b.setMargin(new java.awt.Insets(0, 0, 0, 0));
         b.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        b.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseEntered(java.awt.event.MouseEvent e) { b.setForeground(new Color(255, 80, 80)); b.repaint(); }
+            public void mouseExited(java.awt.event.MouseEvent e)  { b.setForeground(new Color(220, 60, 60)); b.repaint(); }
+        });
         return b;
     }
 
