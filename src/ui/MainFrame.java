@@ -1,6 +1,7 @@
 package ui;
 
 import gate_control.GateProcessor;
+import management.RecordManager;
 import models.ParkingMap;
 
 import javax.swing.*;
@@ -17,15 +18,18 @@ public class MainFrame extends JFrame {
         { "Search",       "Search",       "🔍" },
         { "Routes",       "Routes",       "🗺️" },
         { "Logs",         "Logs",         "📋" },
+        { "Management",   "Management",   "🧾" },
+        { "Retrieval",    "Retrieval",    "⚡" },
         { "User",         "User",         "👤" },
     };
 
-    private final CardLayout    cardLayout  = new CardLayout();
-    private final JPanel        contentArea = new JPanel(cardLayout);
-    private final JButton[]     navBtns     = new JButton[NAV.length];
-    private final ActivityLog   log         = new ActivityLog();
-    private final GateProcessor gate        = new GateProcessor();
-    private final ParkingMap    parkingMap  = new ParkingMap();
+    private final CardLayout cardLayout;
+    private final JPanel contentArea;
+    private final JButton[] navBtns;
+    private final ActivityLog log;
+    private final GateProcessor gate;
+    private final ParkingMap parkingMap;
+    private final RecordManager records;
 
     // Panels
     private DashboardPanel   dashboardPanel;
@@ -35,12 +39,24 @@ public class MainFrame extends JFrame {
     private NavigationPanel  navigationPanel;
     private SearchPanel      searchPanel;
     private LogsPanel        logsPanel;
+    private RetrievalPanel   retrievalPanel;
     private UserPanel        userPanel;
 
 
     public MainFrame() {
+        this(new GateProcessor(), new ActivityLog());
+    }
+
+    public MainFrame(GateProcessor gate, ActivityLog log) {
         super("SmartPark");
         UITheme.applyGlobalDefaults();
+        this.gate = gate;
+        this.log = log;
+        this.parkingMap = new ParkingMap();
+        this.records = new RecordManager();
+        this.cardLayout = new CardLayout();
+        this.contentArea = new JPanel(cardLayout);
+        this.navBtns = new JButton[NAV.length];
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setSize(1320, 860);
         setMinimumSize(new Dimension(1060, 680));
@@ -62,14 +78,15 @@ public class MainFrame extends JFrame {
     private JPanel buildContent() {
         contentArea.setBackground(UITheme.BG_DARK);
 
-        dashboardPanel   = new DashboardPanel(log, parkingMap);
+        dashboardPanel   = new DashboardPanel(log, records, parkingMap);
         gateControlPanel = new GateControlPanel(log, gate);
-        assignmentPanel  = new AssignmentPanel(log);
-        searchPanel      = new SearchPanel(log);
-        navigationPanel  = new NavigationPanel(log);
+        assignmentPanel  = new AssignmentPanel(log, records, parkingMap);
+        searchPanel      = new SearchPanel(log, records);
+        navigationPanel  = new NavigationPanel(log, records, parkingMap);
         logsPanel        = new LogsPanel(log);
-        managementPanel  = new ManagementPanel(log, dashboardPanel);
-        userPanel        = new UserPanel(log, gate, parkingMap);
+        retrievalPanel   = new RetrievalPanel(log, records);
+        userPanel        = new UserPanel(log, gate, parkingMap, records);
+        managementPanel  = new ManagementPanel(log, dashboardPanel, records, gate, userPanel, parkingMap);
 
         contentArea.add(dashboardPanel,   "Dashboard");
         contentArea.add(gateControlPanel, "Entry / Exit");
@@ -77,8 +94,9 @@ public class MainFrame extends JFrame {
         contentArea.add(searchPanel,      "Search");
         contentArea.add(navigationPanel,  "Routes");
         contentArea.add(logsPanel,        "Logs");
-        contentArea.add(userPanel,        "User");
         contentArea.add(managementPanel,  "Management");
+        contentArea.add(retrievalPanel,   "Retrieval");
+        contentArea.add(userPanel,        "User");
 
         return contentArea;
     }

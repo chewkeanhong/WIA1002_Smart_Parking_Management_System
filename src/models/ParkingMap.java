@@ -1,14 +1,17 @@
 package models;
 
 /**
- * Shared live state of the 30-slot parking lot (A01–A30, 3 rows × 10 cols).
+ * Shared live state of the 40-slot parking lot (A01–A40), arranged as
+ * two 2×10 blocks separated by a central driving aisle.
  * All mutations happen on the EDT so no synchronization is needed.
  */
 public class ParkingMap {
 
-    private static final int ROWS  = 3;
-    private static final int COLS  = 10;
-    private static final int TOTAL = ROWS * COLS;   // 30
+    private static final int BLOCKS         = 2;
+    private static final int ROWS_PER_BLOCK = 2;
+    private static final int COLS           = 10;
+    private static final int ROWS           = BLOCKS * ROWS_PER_BLOCK;   // 4
+    private static final int TOTAL          = ROWS * COLS;               // 40
 
     private final boolean[] occupied = new boolean[TOTAL];
 
@@ -23,6 +26,12 @@ public class ParkingMap {
 
     public void markOccupied(String id) { int i = idx(id); if (i >= 0) occupied[i] = true;  }
     public void markFree    (String id) { int i = idx(id); if (i >= 0) occupied[i] = false; }
+
+    public void clearOccupancy() {
+        for (int i = 0; i < occupied.length; i++) {
+            occupied[i] = false;
+        }
+    }
 
     public boolean isOccupied(int i) { return i >= 0 && i < TOTAL && occupied[i]; }
 

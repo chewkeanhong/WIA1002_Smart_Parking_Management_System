@@ -1,6 +1,7 @@
 package ui;
 
 import retrieval.FastAccessor;
+import management.RecordManager;
 import models.Vehicle;
 import models.ParkingSlot;
 
@@ -18,6 +19,7 @@ import java.util.List;
 public class RetrievalPanel extends JPanel {
 
     private final ActivityLog   log;
+    private final RecordManager records;
     private final FastAccessor  fa = new FastAccessor();
 
     // Input fields
@@ -38,11 +40,17 @@ public class RetrievalPanel extends JPanel {
     private JLabel vehicleMapStats, slotMapStats;
 
     public RetrievalPanel(ActivityLog log) {
+        this(log, null);
+    }
+
+    public RetrievalPanel(ActivityLog log, RecordManager records) {
         this.log = log;
+        this.records = records;
         setBackground(UITheme.BG_DARK);
         setLayout(new BorderLayout(0, 16));
         setBorder(new EmptyBorder(28, 28, 28, 28));
 
+        syncCachesFromRecords();
         add(buildHeader(),     BorderLayout.NORTH);
         add(buildBody(),       BorderLayout.CENTER);
         add(buildComplexity(), BorderLayout.SOUTH);
@@ -207,6 +215,9 @@ public class RetrievalPanel extends JPanel {
         if (plate.isEmpty() || owner.isEmpty()) { status("Fill both fields.", UITheme.DANGER); return; }
 
         Vehicle v = new Vehicle(plate, owner, System.currentTimeMillis());
+        if (records != null && records.findVehicleByPlate(plate) == null) {
+            records.addVehicleRecord(v);
+        }
         fa.cacheVehicle(v);
         log.log("CACHE  put(vehicle, " + plate + ") — O(1)");
         status("Cached vehicle " + plate + " — O(1).", UITheme.SUCCESS);
@@ -217,10 +228,17 @@ public class RetrievalPanel extends JPanel {
     private void removeVehicle() {
         String plate = tfLookupPlate.getText().trim().toUpperCase();
         if (plate.isEmpty()) { status("Enter plate in lookup field.", UITheme.WARNING); return; }
+        syncCachesFromRecords();
         boolean ok = fa.removeVehicle(plate);
         if (ok) {
             log.log("CACHE  remove(vehicle, " + plate + ") — O(1)");
             status("Removed " + plate + " — O(1).", UITheme.WARNING);
+            if (records != null) {
+                Vehicle existing = records.findVehicleByPlate(plate);
+                if (existing != null) {
+                    records.removeVehicleRecord(existing);
+                }
+            }
         } else {
             status(plate + " not in cache.", UITheme.DANGER);
         }
@@ -235,7 +253,15 @@ public class RetrievalPanel extends JPanel {
         try { dist = Integer.parseInt(ds); } catch (NumberFormatException ex) {
             status("Distance must be a number.", UITheme.DANGER); return;
         }
-        ParkingSlot slot = new ParkingSlot(id, dist);
+        ParkingSlot slot = records == null ? null : records.findSlotById(id);
+        if (slot == null) {
+            slot = new ParkingSlot(id, dist);
+            if (records != null) {
+                records.addParkingSlotRecord(slot);
+            }
+        } else {
+            slot.setDistanceToGate(dist);
+        }
         fa.cacheSlot(slot);
         log.log("CACHE  put(slot, " + id + ") — O(1)");
         status("Cached slot " + id + " — O(1).", UITheme.SUCCESS);
@@ -246,6 +272,7 @@ public class RetrievalPanel extends JPanel {
     private void lookupVehicle() {
         String plate = tfLookupPlate.getText().trim().toUpperCase();
         if (plate.isEmpty()) { status("Enter plate.", UITheme.DANGER); return; }
+        syncCachesFromRecords();
         Vehicle v = fa.getVehicle(plate);
         if (v != null) {
             lookupResultLabel.setText("<html>✓ Vehicle: <b>" + v.getLicensePlate() + "</b>  |  " +
@@ -264,6 +291,7 @@ public class RetrievalPanel extends JPanel {
     private void lookupSlot() {
         String id = tfLookupSlot.getText().trim().toUpperCase();
         if (id.isEmpty()) { status("Enter slot ID.", UITheme.DANGER); return; }
+        syncCachesFromRecords();
         ParkingSlot s = fa.getSlot(id);
         if (s != null) {
             lookupResultLabel.setText("<html>✓ Slot: <b>" + s.getSlotId() + "</b>  |  dist: " +
@@ -281,6 +309,7 @@ public class RetrievalPanel extends JPanel {
 
     // ── Table refresh ─────────────────────────────────────────────────────────
     private void refreshTables() {
+        syncCachesFromRecords();
         vehicleMapModel.setRowCount(0);
         List<String[]> ve = fa.getVehicleMap().getEntries();
         for (String[] e : ve) {
@@ -303,6 +332,25 @@ public class RetrievalPanel extends JPanel {
         }
         slotMapStats.setText("HashMap — " + se.size() + " entries, capacity: " +
                              fa.getSlotMap().getCapacity());
+    }
+
+    private void syncCachesFromRecords() {
+        if (records == null) {
+            return;
+        }
+
+        fa.clear();
+
+        for (Vehicle v : records.getAllVehiclesList()) {
+            fa.cacheVehicle(v);
+            if (v.getAssignedSlotId() != null) {
+                fa.mapVehicleToSlot(v.getLicensePlate(), v.getAssignedSlotId());
+            }
+        }
+
+        for (ParkingSlot s : records.getAllParkingSlotsList()) {
+            fa.cacheSlot(s);
+        }
     }
 
     // ── Form helper ───────────────────────────────────────────────────────────

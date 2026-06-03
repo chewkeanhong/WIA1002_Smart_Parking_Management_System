@@ -45,6 +45,22 @@ public class UndoStack {
     public boolean isEmpty() { return top < 0; }
     public int     getSize() { return top + 1; }
 
+    /**
+     * Removes every action that references the given vehicle. Returns the number of actions removed.
+     * Used when a user cancels an entry via the UI so a later Undo can't resurrect it.
+     */
+    public int removeActionsFor(Vehicle vehicle) {
+        if (vehicle == null || isEmpty()) return 0;
+        int write = 0, removed = 0;
+        for (int read = 0; read <= top; read++) {
+            if (stack[read].vehicle == vehicle) { removed++; continue; }
+            stack[write++] = stack[read];
+        }
+        for (int i = write; i <= top; i++) stack[i] = null;
+        top = write - 1;
+        return removed;
+    }
+
     /** Returns a snapshot in push order (bottom → top) for UI display. */
     public Action[] toArray() {
         Action[] arr = new Action[top + 1];

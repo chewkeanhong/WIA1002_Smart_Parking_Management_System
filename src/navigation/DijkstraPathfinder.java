@@ -80,4 +80,89 @@ public class DijkstraPathfinder {
 
         return finalPath;
     }
+
+    /**
+     * Dijkstra variant that terminates when a specific destination node is reached.
+     * Returns the ordered list of node IDs from start to end, or an empty list if unreachable.
+     */
+    public static List<String> findShortestPath(RouteGraph graph, String startId, String endId) {
+        if (graph.getNode(startId) == null || graph.getNode(endId) == null) {
+            return Collections.emptyList();
+        }
+
+        Map<String, Double> minCosts = new HashMap<>();
+        Map<String, String> predecessors = new HashMap<>();
+        PriorityQueue<PathNode> pq = new PriorityQueue<>();
+
+        for (RouteGraph.Node node : graph.getAllNodes()) {
+            minCosts.put(node.id, Double.MAX_VALUE);
+        }
+        minCosts.put(startId, 0.0);
+        pq.add(new PathNode(startId, 0.0));
+
+        boolean reached = false;
+        while (!pq.isEmpty()) {
+            PathNode current = pq.poll();
+            if (current.id.equals(endId)) { reached = true; break; }
+            if (current.cost > minCosts.get(current.id)) continue;
+
+            for (RouteGraph.Edge edge : graph.getNeighbors(current.id)) {
+                RouteGraph.Node neighbor = edge.target;
+                double alt = minCosts.get(current.id) + edge.weight;
+                if (alt < minCosts.get(neighbor.id)) {
+                    minCosts.put(neighbor.id, alt);
+                    predecessors.put(neighbor.id, current.id);
+                    pq.add(new PathNode(neighbor.id, alt));
+                }
+            }
+        }
+
+        if (!reached) return Collections.emptyList();
+
+        LinkedList<String> path = new LinkedList<>();
+        String step = endId;
+        while (step != null) {
+            path.addFirst(step);
+            step = predecessors.get(step);
+        }
+        return path;
+    }
+
+    /**
+     * Calculates the total edge weight for an already constructed path.
+     * Returns Integer.MAX_VALUE if the path is invalid or an edge is missing.
+     */
+    public static int calculatePathCost(RouteGraph graph, List<String> path) {
+        if (graph == null || path == null || path.size() < 2) {
+            return 0;
+        }
+
+        double total = 0.0;
+        for (int i = 0; i < path.size() - 1; i++) {
+            RouteGraph.Node from = graph.getNode(path.get(i));
+            RouteGraph.Node to = graph.getNode(path.get(i + 1));
+            if (from == null || to == null) {
+                return Integer.MAX_VALUE;
+            }
+
+            boolean found = false;
+            for (RouteGraph.Edge edge : graph.getNeighbors(from.id)) {
+                if (edge.target.id.equals(to.id)) {
+                    total += edge.weight;
+                    found = true;
+                    break;
+                }
+            }
+            if (!found) {
+                return Integer.MAX_VALUE;
+            }
+        }
+
+        return (int) Math.round(total);
+    }
+
+    /** Convenience helper that computes the cost for the shortest path. */
+    public static int calculateShortestPathCost(RouteGraph graph, String startId, String endId) {
+        return calculatePathCost(graph, findShortestPath(graph, startId, endId));
+    }
 }
