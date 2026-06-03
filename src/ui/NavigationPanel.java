@@ -223,7 +223,7 @@ public class NavigationPanel extends JPanel {
 
     // ── Click → route ────────────────────────────────────────────────────────
     private void selectVehicle(Vehicle v) {
-        String startNode = resolveStartNode(v.getPreferredGateId());
+        String startNode = DEFAULT_ACCESS_NODE;
         routedStartNode = startNode;
 
         String slotId = v.getAssignedSlotId();
@@ -231,7 +231,7 @@ public class NavigationPanel extends JPanel {
             slotId = assignNearestSlot(v);
             if (slotId == null) { status("Lot is full — no free slot to route to.", UITheme.DANGER); return; }
             log.log("NAV  Auto-assigned " + slotId + " to " + v.getLicensePlate() +
-                    " via " + prettyAccessPoint(startNode));
+                " via Entrance");
         }
 
         String norm = slotId.trim().toUpperCase();
@@ -241,8 +241,8 @@ public class NavigationPanel extends JPanel {
         }
 
         long t0 = System.nanoTime();
-        entranceToSlotPath = DijkstraPathfinder.findShortestPath(graph, startNode, norm);
-        currentPath = buildFullRoutePath(startNode, norm);
+        entranceToSlotPath = DijkstraPathfinder.findShortestPath(graph, DEFAULT_ACCESS_NODE, norm);
+        currentPath = buildFullRoutePath(DEFAULT_ACCESS_NODE, norm);
         long us = (System.nanoTime() - t0) / 1000;
 
         if (currentPath.isEmpty()) {
@@ -252,11 +252,11 @@ public class NavigationPanel extends JPanel {
 
         routedPlate    = v.getLicensePlate();
         routedSlot     = norm;
-          lastDirections = buildDirections(currentPath, startNode);
+                    lastDirections = buildDirections(currentPath, DEFAULT_ACCESS_NODE);
 
         status("Route to " + norm + "  (" + (currentPath.size() - 1) + " hops · " + us + " µs)",
                UITheme.SUCCESS);
-              log.log("NAV  Dijkstra " + prettyAccessPoint(startNode) + " → " + norm + " for " + v.getLicensePlate()
+                            log.log("NAV  Dijkstra Entrance → " + norm + " for " + v.getLicensePlate()
               + "  (" + (currentPath.size() - 1) + " hops, " + us + " µs)");
 
         applySelectionBorders();
@@ -381,14 +381,15 @@ public class NavigationPanel extends JPanel {
 
     private String prettyAccessPoint(String nodeId) {
         if (nodeId == null) {
-            return "Nearest Entrance";
+            return "Entrance";
         }
 
         switch (nodeId) {
+            case "ENTRANCE": return "Entrance";
             case "GATE_A": return "Gate A";
             case "GATE_B": return "Gate B";
             case "GATE_C": return "Gate C";
-            default: return "Nearest Entrance";
+            default: return "Entrance";
         }
     }
 
