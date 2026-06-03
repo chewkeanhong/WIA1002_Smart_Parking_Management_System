@@ -60,4 +60,11 @@ public class FastAccessor {
     public HashMap<String, ParkingSlot> getSlotMap() { 
         return slotMap; 
     }
+
+    // Clear all cached retrieval data.
+    public void clear() {
+        vehicleMap.clear();
+        slotMap.clear();
+        vehicleToSlot.clear();
+    }
 }

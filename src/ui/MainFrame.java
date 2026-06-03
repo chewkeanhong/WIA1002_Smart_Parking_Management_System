@@ -18,6 +18,8 @@ public class MainFrame extends JFrame {
         { "Search",       "Search",       "🔍" },
         { "Routes",       "Routes",       "🗺️" },
         { "Logs",         "Logs",         "📋" },
+        { "Management",   "Management",   "🧾" },
+        { "Retrieval",    "Retrieval",    "⚡" },
         { "User",         "User",         "👤" },
     };
 
@@ -37,6 +39,7 @@ public class MainFrame extends JFrame {
     private NavigationPanel  navigationPanel;
     private SearchPanel      searchPanel;
     private LogsPanel        logsPanel;
+    private RetrievalPanel   retrievalPanel;
     private UserPanel        userPanel;
 
 
@@ -75,14 +78,15 @@ public class MainFrame extends JFrame {
     private JPanel buildContent() {
         contentArea.setBackground(UITheme.BG_DARK);
 
-        dashboardPanel   = new DashboardPanel(log, parkingMap);
+        dashboardPanel   = new DashboardPanel(log, records, parkingMap);
         gateControlPanel = new GateControlPanel(log, gate);
         assignmentPanel  = new AssignmentPanel(log, records, parkingMap);
         searchPanel      = new SearchPanel(log, records);
         navigationPanel  = new NavigationPanel(log, records, parkingMap);
         logsPanel        = new LogsPanel(log);
-        managementPanel  = new ManagementPanel(log, dashboardPanel, records);
+        retrievalPanel   = new RetrievalPanel(log, records);
         userPanel        = new UserPanel(log, gate, parkingMap, records);
+        managementPanel  = new ManagementPanel(log, dashboardPanel, records, gate, userPanel, parkingMap);
 
         contentArea.add(dashboardPanel,   "Dashboard");
         contentArea.add(gateControlPanel, "Entry / Exit");
@@ -90,8 +94,9 @@ public class MainFrame extends JFrame {
         contentArea.add(searchPanel,      "Search");
         contentArea.add(navigationPanel,  "Routes");
         contentArea.add(logsPanel,        "Logs");
-        contentArea.add(userPanel,        "User");
         contentArea.add(managementPanel,  "Management");
+        contentArea.add(retrievalPanel,   "Retrieval");
+        contentArea.add(userPanel,        "User");
 
         return contentArea;
     }

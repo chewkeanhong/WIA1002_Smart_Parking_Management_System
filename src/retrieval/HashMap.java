@@ -103,6 +103,14 @@ public class HashMap<K, V> {
         return capacity; 
     }
 
+    /** Reset the table back to an empty state. */
+    @SuppressWarnings("unchecked")
+    public void clear() {
+        buckets = new Entry[DEFAULT_CAP];
+        size = 0;
+        capacity = DEFAULT_CAP;
+    }
+
     /**
      * Return all stored entries as [bucketIndex, key, value] string triples.
      * This is used for UI display, so the order follows bucket traversal.

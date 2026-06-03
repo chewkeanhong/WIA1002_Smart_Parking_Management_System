@@ -1,5 +1,6 @@
 package ui;
 
+import management.RecordManager;
 import models.ParkingMap;
 
 import javax.swing.*;
@@ -10,12 +11,14 @@ public class DashboardPanel extends JPanel {
 
     private JLabel statVehicles, statSlots, statUtil, statSearches;
 
+    private final RecordManager recordManager;
     private final ParkingMap  parkingMap;
     private JPanel[]          slotCells;
     private JLabel[]          slotLabels;
     private JLabel            freeCountLabel, occupiedCountLabel;
 
-    public DashboardPanel(ActivityLog log, ParkingMap parkingMap) {
+    public DashboardPanel(ActivityLog log, RecordManager recordManager, ParkingMap parkingMap) {
+        this.recordManager = recordManager;
         this.parkingMap = parkingMap;
         setBackground(UITheme.BG_DARK);
         setLayout(new BorderLayout(0, 16));
@@ -24,7 +27,11 @@ public class DashboardPanel extends JPanel {
         add(buildHeader(),  BorderLayout.NORTH);
         add(buildContent(), BorderLayout.CENTER);
 
-        new Timer(1000, e -> refreshMap()).start();
+        new Timer(1000, e -> refreshAll()).start();
+    }
+
+    public DashboardPanel(ActivityLog log, ParkingMap parkingMap) {
+        this(log, null, parkingMap);
     }
 
     // ── Header ────────────────────────────────────────────────────────────────
@@ -460,6 +467,27 @@ public class DashboardPanel extends JPanel {
         occupiedCountLabel.setText("Occupied: " + parkingMap.getOccupiedCount());
     }
 
+    private void refreshStats() {
+        if (recordManager == null) return;
+
+        int vehicles = recordManager.getVehicleCount();
+        int totalSlots = recordManager.getParkingSlotCount();
+        int availableSlots = parkingMap == null ? 0 : parkingMap.getFreeCount();
+        int occupiedSlots = parkingMap == null ? 0 : parkingMap.getOccupiedCount();
+        int indexEntries = vehicles + totalSlots;
+
+        statVehicles.setText(String.valueOf(vehicles));
+        statSlots.setText(String.valueOf(availableSlots));
+        int pct = totalSlots == 0 ? 0 : (occupiedSlots * 100 / totalSlots);
+        statUtil.setText(pct + " %");
+        statSearches.setText(String.valueOf(indexEntries));
+    }
+
+    private void refreshAll() {
+        refreshStats();
+        refreshMap();
+    }
+
     // ── System Modules card ───────────────────────────────────────────────────
     private JPanel buildModulesCard() {
         JPanel card = UITheme.makeCard(new BorderLayout(0, 12));
@@ -528,7 +556,8 @@ public class DashboardPanel extends JPanel {
     public void refresh(int vehicles, int slotsAvail, int totalSlots, int indexEntries) {
         statVehicles.setText(String.valueOf(vehicles));
         statSlots.setText(String.valueOf(slotsAvail));
-        int pct = totalSlots == 0 ? 0 : (vehicles * 100 / Math.max(totalSlots, 1));
+        int occupiedSlots = Math.max(totalSlots - slotsAvail, 0);
+        int pct = totalSlots == 0 ? 0 : (occupiedSlots * 100 / totalSlots);
         statUtil.setText(pct + " %");
         statSearches.setText(String.valueOf(indexEntries));
     }

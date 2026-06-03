@@ -2,6 +2,7 @@ package ui;
 
 import management.RecordManager;
 import models.ParkingMap;
+import models.ParkingSlot;
 import models.Vehicle;
 import navigation.DijkstraPathfinder;
 import navigation.RouteGraph;
@@ -240,8 +241,8 @@ public class NavigationPanel extends JPanel {
         }
 
         long t0 = System.nanoTime();
-        entranceToSlotPath = DijkstraPathfinder.findShortestPath(graph, "ENTRANCE", norm);
-        currentPath = buildFullRoutePath(norm);
+        entranceToSlotPath = DijkstraPathfinder.findShortestPath(graph, startNode, norm);
+        currentPath = buildFullRoutePath(startNode, norm);
         long us = (System.nanoTime() - t0) / 1000;
 
         if (currentPath.isEmpty()) {
@@ -251,11 +252,11 @@ public class NavigationPanel extends JPanel {
 
         routedPlate    = v.getLicensePlate();
         routedSlot     = norm;
-        lastDirections = buildDirections(currentPath);
+          lastDirections = buildDirections(currentPath, startNode);
 
         status("Route to " + norm + "  (" + (currentPath.size() - 1) + " hops · " + us + " µs)",
                UITheme.SUCCESS);
-           log.log("NAV  Dijkstra ENTRANCE → " + norm + " via " + prettyAccessPoint(startNode) + " for " + v.getLicensePlate()
+              log.log("NAV  Dijkstra " + prettyAccessPoint(startNode) + " → " + norm + " for " + v.getLicensePlate()
               + "  (" + (currentPath.size() - 1) + " hops, " + us + " µs)");
 
         applySelectionBorders();
@@ -295,9 +296,20 @@ public class NavigationPanel extends JPanel {
         }
 
         String slotId = path.get(path.size() - 1);
+        int routeCost = DijkstraPathfinder.calculatePathCost(graph, path);
         parkingMap.markOccupied(slotId);
         graph.setOccupancy(slotId, true);
         vehicle.setAssignedSlotId(slotId);
+        if (records != null) {
+            ParkingSlot slotRecord = records.findSlotById(slotId);
+            if (slotRecord == null) {
+                slotRecord = new ParkingSlot(slotId, routeCost);
+                records.addParkingSlotRecord(slotRecord);
+            } else {
+                slotRecord.setDistanceToGate(routeCost);
+            }
+            slotRecord.setParkedVehicle(vehicle);
+        }
         return slotId;
     }
 
@@ -338,11 +350,14 @@ public class NavigationPanel extends JPanel {
     }
 
     // ── Path → human directions ──────────────────────────────────────────────
-    private String buildDirections(List<String> path) {
+    private String buildDirections(List<String> path, String startNode) {
         if (path.size() < 2) return "Already at destination.";
         StringBuilder sb = new StringBuilder();
         int step = 1;
-        sb.append(step++).append(". Depart ENTRANCE.").append('\n');
+        sb.append(step++)
+          .append(". Depart ")
+          .append(prettyAccessPoint(startNode))
+          .append('.').append('\n');
 
         sb.append(step++).append(". Follow the blue route to your assigned parking slot.").append('\n');
 
@@ -360,8 +375,8 @@ public class NavigationPanel extends JPanel {
         return sb.toString();
     }
 
-    private List<String> buildFullRoutePath(String slotId) {
-        return DijkstraPathfinder.findShortestPath(graph, "ENTRANCE", slotId);
+    private List<String> buildFullRoutePath(String startNode, String slotId) {
+        return DijkstraPathfinder.findShortestPath(graph, startNode, slotId);
     }
 
     private String prettyAccessPoint(String nodeId) {
@@ -568,7 +583,7 @@ public class NavigationPanel extends JPanel {
         }
 
         private void drawPath(Graphics2D g, double s, double ox, double oy) {
-            drawColoredPath(g, entranceToSlotPath, s, ox, oy, new Color(59, 130, 246), -5.0);
+            drawColoredPath(g, currentPath, s, ox, oy, new Color(59, 130, 246), -5.0);
         }
 
         private void drawColoredPath(Graphics2D g, List<String> path, double s, double ox, double oy,

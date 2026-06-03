@@ -228,16 +228,22 @@ public class AssignmentPanel extends JPanel {
         JPanel cmpCard = UITheme.makeCard(new BorderLayout(0, 8));
         cmpCard.add(UITheme.makeSectionHeader("Min-Heap vs Linear Search", null, null), BorderLayout.NORTH);
 
-        String[] cols = { "Operation", "Min-Heap", "Linear List", "Reason" };
+        String[] cols = { "Operation", "Min-Heap", "Linear Search", "Reason" };
         DefaultTableModel cmpModel = new DefaultTableModel(compData, cols) {
             public boolean isCellEditable(int r, int c) { return false; }
         };
         JTable cmpTable = new JTable(cmpModel);
         UITheme.styleTable(cmpTable);
+        cmpTable.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
+        cmpTable.setPreferredScrollableViewportSize(new Dimension(0, 110));
         cmpTable.getColumnModel().getColumn(0).setPreferredWidth(120);
+        cmpTable.getColumnModel().getColumn(0).setMinWidth(100);
         cmpTable.getColumnModel().getColumn(1).setPreferredWidth(70);
+        cmpTable.getColumnModel().getColumn(1).setMinWidth(60);
         cmpTable.getColumnModel().getColumn(2).setPreferredWidth(90);
-        cmpTable.getColumnModel().getColumn(3).setPreferredWidth(200);
+        cmpTable.getColumnModel().getColumn(2).setMinWidth(80);
+        cmpTable.getColumnModel().getColumn(3).setPreferredWidth(420);
+        cmpTable.getColumnModel().getColumn(3).setMinWidth(360);
         cmpCard.add(UITheme.wrapScroll(cmpTable), BorderLayout.CENTER);
 
         col.add(cmpCard, BorderLayout.SOUTH);
@@ -327,6 +333,12 @@ public class AssignmentPanel extends JPanel {
                 parkingMap.markFree(oldSlotId);
             }
             routeGraph.setOccupancy(oldSlotId, false);
+            if (records != null) {
+                ParkingSlot oldRecord = records.findSlotById(oldSlotId);
+                if (oldRecord != null) {
+                    oldRecord.setParkedVehicle(null);
+                }
+            }
         }
         if (oldSlot != null) {
             oldSlot.setParkedVehicle(null);
@@ -340,6 +352,16 @@ public class AssignmentPanel extends JPanel {
             parkingMap.markOccupied(best.getSlotId());
         }
         routeGraph.setOccupancy(best.getSlotId(), true);
+        if (records != null) {
+            ParkingSlot slotRecord = records.findSlotById(best.getSlotId());
+            if (slotRecord == null) {
+                slotRecord = new ParkingSlot(best.getSlotId(), best.getDistanceToGate());
+                records.addParkingSlotRecord(slotRecord);
+            } else {
+                slotRecord.setDistanceToGate(best.getDistanceToGate());
+            }
+            slotRecord.setParkedVehicle(v);
+        }
 
         String priorText = oldSlotId == null ? "" : " (reassigned from " + oldSlotId + ")";
         log.log("HEAP  Assigned slot " + best.getSlotId() + " (dist=" + best.getDistanceToGate() +
@@ -366,33 +388,7 @@ public class AssignmentPanel extends JPanel {
     }
 
     private int computeRouteCost(String gateNode, String slotId) {
-        List<String> path = DijkstraPathfinder.findShortestPath(routeGraph, gateNode, slotId);
-        if (path.isEmpty()) {
-            return Integer.MAX_VALUE;
-        }
-
-        double total = 0.0;
-        for (int i = 0; i < path.size() - 1; i++) {
-            RouteGraph.Node from = routeGraph.getNode(path.get(i));
-            RouteGraph.Node to = routeGraph.getNode(path.get(i + 1));
-            if (from == null || to == null) {
-                return Integer.MAX_VALUE;
-            }
-
-            boolean found = false;
-            for (RouteGraph.Edge edge : routeGraph.getNeighbors(from.id)) {
-                if (edge.target.id.equals(to.id)) {
-                    total += edge.weight;
-                    found = true;
-                    break;
-                }
-            }
-            if (!found) {
-                return Integer.MAX_VALUE;
-            }
-        }
-
-        return (int) Math.round(total);
+        return DijkstraPathfinder.calculateShortestPathCost(routeGraph, gateNode, slotId);
     }
 
     private ParkingSlot findRegisteredSlot(String slotId) {

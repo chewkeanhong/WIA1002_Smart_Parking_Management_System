@@ -127,4 +127,42 @@ public class DijkstraPathfinder {
         }
         return path;
     }
+
+    /**
+     * Calculates the total edge weight for an already constructed path.
+     * Returns Integer.MAX_VALUE if the path is invalid or an edge is missing.
+     */
+    public static int calculatePathCost(RouteGraph graph, List<String> path) {
+        if (graph == null || path == null || path.size() < 2) {
+            return 0;
+        }
+
+        double total = 0.0;
+        for (int i = 0; i < path.size() - 1; i++) {
+            RouteGraph.Node from = graph.getNode(path.get(i));
+            RouteGraph.Node to = graph.getNode(path.get(i + 1));
+            if (from == null || to == null) {
+                return Integer.MAX_VALUE;
+            }
+
+            boolean found = false;
+            for (RouteGraph.Edge edge : graph.getNeighbors(from.id)) {
+                if (edge.target.id.equals(to.id)) {
+                    total += edge.weight;
+                    found = true;
+                    break;
+                }
+            }
+            if (!found) {
+                return Integer.MAX_VALUE;
+            }
+        }
+
+        return (int) Math.round(total);
+    }
+
+    /** Convenience helper that computes the cost for the shortest path. */
+    public static int calculateShortestPathCost(RouteGraph graph, String startId, String endId) {
+        return calculatePathCost(graph, findShortestPath(graph, startId, endId));
+    }
 }

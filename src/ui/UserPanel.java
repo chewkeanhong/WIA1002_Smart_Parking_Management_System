@@ -3,7 +3,9 @@ package ui;
 import gate_control.GateProcessor;
 import management.RecordManager;
 import models.ParkingMap;
+import models.ParkingSlot;
 import models.Vehicle;
+import navigation.DijkstraPathfinder;
 import navigation.RouteGraph;
 
 import javax.swing.*;
@@ -105,6 +107,14 @@ public class UserPanel extends JPanel {
         bubbleContainer.add(bubble);
         bubbleContainer.revalidate();
         bubbleContainer.repaint();
+    }
+
+    public void addManagedVehicle(Vehicle vehicle) {
+        if (vehicle == null || findBubbleByPlate(vehicle.getLicensePlate()) != null) {
+            return;
+        }
+
+        addTrackedWaitingBubble(vehicle, true);
     }
 
     // ── State 1: Input form ───────────────────────────────────────────────────
@@ -265,6 +275,106 @@ public class UserPanel extends JPanel {
         return p;
     }
 
+    private void addTrackedWaitingBubble(Vehicle vehicle, boolean managedByAdmin) {
+        bubbleCounter++;
+        final int number = bubbleCounter;
+        final String plate = vehicle.getLicensePlate();
+        final String name = vehicle.getOwnerName();
+        final String preferredGateId = vehicle.getPreferredGateId();
+
+        CardLayout cl = new CardLayout();
+        JPanel bubble = new JPanel(cl);
+        bubble.setPreferredSize(new Dimension(240, 235));
+        bubble.setBackground(UITheme.BG_CARD);
+        bubble.setBorder(BorderFactory.createLineBorder(UITheme.BORDER, 1));
+
+        JLabel[] posLabelRef   = {null};
+        JLabel[] totalLabelRef = {null};
+        JPanel waitingCard = buildWaitingCard(bubble, number, plate, name,
+                                              prettyGateLabel(preferredGateId), posLabelRef, totalLabelRef);
+        bubble.add(waitingCard, "WAITING");
+        bubble.setBorder(BorderFactory.createLineBorder(UITheme.WARNING, 1));
+        cl.show(bubble, "WAITING");
+
+        bubbleContainer.add(bubble);
+        bubbleContainer.revalidate();
+        bubbleContainer.repaint();
+
+        bubbleVehicles.put(bubble, vehicle);
+        int pos = gate.getEntryQueue().getSize();
+        setStatus((managedByAdmin ? "Admin-added " : "") + plate + " joined queue at position #" + pos + ".", UITheme.WARNING);
+
+        int[]    currentState    = {1};
+        String[] slotRef         = {null};
+        JPanel[] assignedCardRef = {null};
+
+        Timer timer = new Timer(1000, e -> {
+            Vehicle[] queue = gate.getEntryQueue().toArray();
+            boolean inQueue = false;
+            int qPos = -1;
+            for (int i = 0; i < queue.length; i++) {
+                if (queue[i].getLicensePlate().equals(plate)) {
+                    inQueue = true; qPos = i + 1; break;
+                }
+            }
+
+            if (currentState[0] == 1) {
+                if (!inQueue) {
+                    if (gate.wasApproved(plate)) {
+                        String slot = assignNearestSlot(vehicle);
+                        if (slot == null) {
+                            setStatus("All slots are currently full — waiting for a free bay.", UITheme.WARNING);
+                            return;
+                        }
+
+                        currentState[0] = 2;
+                        slotRef[0] = slot;
+                        bubbleSlots.put(bubble, slot);
+
+                        assignedCardRef[0] = buildAssignedCard(bubble, number, plate, name, slot);
+                        bubble.add(assignedCardRef[0], "ASSIGNED");
+                        bubble.setBorder(BorderFactory.createLineBorder(UITheme.SUCCESS, 1));
+                        cl.show(bubble, "ASSIGNED");
+                        log.log("USER  Slot assigned: " + plate + " → " + slot + " via " + prettyGateLabel(preferredGateId));
+                        setStatus("Slot " + slot + " assigned to " + plate + " — approved by admin.", UITheme.SUCCESS);
+                    } else {
+                        log.log("USER  Entry cancelled: " + plate + " removed by undo.");
+                        setStatus("Entry cancelled for " + plate + " — undo removed it from queue.", UITheme.WARNING);
+                        removeBubble(bubble);
+                    }
+                } else {
+                    int total = queue.length;
+                    int ahead = qPos - 1;
+                    posLabelRef[0].setText("Position  #" + qPos + "  of  " + total + "  in queue");
+                    totalLabelRef[0].setText(ahead == 0 ? "You are next!" :
+                        ahead + " vehicle" + (ahead > 1 ? "s" : "") + " ahead of you");
+                    totalLabelRef[0].setForeground(ahead == 0 ? UITheme.SUCCESS : UITheme.TEXT_SECONDARY);
+                }
+
+            } else if (currentState[0] == 2) {
+                if (inQueue) {
+                    currentState[0] = 1;
+                    if (slotRef[0] != null) {
+                        releaseAssignedSlot(vehicle);
+                        bubbleSlots.remove(bubble);
+                        slotRef[0] = null;
+                    }
+                    Vehicle existing = records.findVehicleByPlate(plate);
+                    if (existing != null) records.removeVehicleRecord(existing);
+                    if (assignedCardRef[0] != null) {
+                        bubble.remove(assignedCardRef[0]);
+                        assignedCardRef[0] = null;
+                    }
+                    bubble.setBorder(BorderFactory.createLineBorder(UITheme.WARNING, 1));
+                    cl.show(bubble, "WAITING");
+                    setStatus("Approval undone for " + plate + " — back in queue.", UITheme.WARNING);
+                }
+            }
+        });
+        timer.start();
+        bubbleTimers.put(bubble, timer);
+    }
+
     // ── Submit → state-machine timer ─────────────────────────────────────────
 
     private void submitToQueue(JPanel bubble, CardLayout cl,
@@ -400,6 +510,49 @@ public class UserPanel extends JPanel {
         bubbleContainer.repaint();
     }
 
+    public boolean removeVehicleByPlate(String plate) {
+        JPanel bubble = findBubbleByPlate(plate);
+        if (bubble == null) {
+            return false;
+        }
+        removeBubble(bubble);
+        return true;
+    }
+
+    public boolean removeVehicleBySlotId(String slotId) {
+        if (slotId == null) {
+            return false;
+        }
+
+        String normalized = slotId.trim().toUpperCase();
+        for (Map.Entry<JPanel, String> entry : bubbleSlots.entrySet()) {
+            if (normalized.equalsIgnoreCase(entry.getValue())) {
+                removeBubble(entry.getKey());
+                return true;
+            }
+        }
+
+        for (Map.Entry<JPanel, Vehicle> entry : bubbleVehicles.entrySet()) {
+            Vehicle v = entry.getValue();
+            if (v != null && normalized.equalsIgnoreCase(v.getAssignedSlotId())) {
+                removeBubble(entry.getKey());
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private JPanel findBubbleByPlate(String plate) {
+        String normalized = Vehicle.normalizePlate(plate);
+        for (Map.Entry<JPanel, Vehicle> entry : bubbleVehicles.entrySet()) {
+            Vehicle vehicle = entry.getValue();
+            if (vehicle != null && Vehicle.normalizePlate(vehicle.getLicensePlate()).equals(normalized)) {
+                return entry.getKey();
+            }
+        }
+        return null;
+    }
+
     private void setStatus(String msg, Color color) {
         statusLabel.setText(msg);
         statusLabel.setForeground(color);
@@ -494,9 +647,20 @@ public class UserPanel extends JPanel {
         }
 
         String slotId = path.get(path.size() - 1);
+        int routeCost = DijkstraPathfinder.calculatePathCost(graph, path);
         parkingMap.markOccupied(slotId);
         graph.setOccupancy(slotId, true);
         vehicle.setAssignedSlotId(slotId);
+        if (records != null) {
+            ParkingSlot slotRecord = records.findSlotById(slotId);
+            if (slotRecord == null) {
+                slotRecord = new ParkingSlot(slotId, routeCost);
+                records.addParkingSlotRecord(slotRecord);
+            } else {
+                slotRecord.setDistanceToGate(routeCost);
+            }
+            slotRecord.setParkedVehicle(vehicle);
+        }
         return slotId;
     }
 
@@ -512,6 +676,12 @@ public class UserPanel extends JPanel {
             }
             if (graph != null) {
                 graph.setOccupancy(slotId, false);
+            }
+            if (records != null) {
+                ParkingSlot slotRecord = records.findSlotById(slotId);
+                if (slotRecord != null) {
+                    slotRecord.setParkedVehicle(null);
+                }
             }
             vehicle.setAssignedSlotId(null);
         }
