@@ -26,9 +26,20 @@ public class HashMap<K, V> {
     }
 
     @SuppressWarnings("unchecked")
-    private Entry<K, V>[] buckets = new Entry[DEFAULT_CAP];
+    private Entry<K, V>[] buckets;
     private int size = 0;
-    private int capacity = DEFAULT_CAP;
+    private int capacity;
+
+    public HashMap() {
+        this.capacity = DEFAULT_CAP;
+        this.buckets  = new Entry[DEFAULT_CAP];
+    }
+
+    @SuppressWarnings("unchecked")
+    public HashMap(int initialCapacity) {
+        this.capacity = initialCapacity;
+        this.buckets  = new Entry[initialCapacity];
+    }
 
     // Core ops
 

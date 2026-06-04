@@ -9,7 +9,10 @@ import java.awt.*;
 
 public class DashboardPanel extends JPanel {
 
-    private JLabel statVehicles, statSlots, statUtil, statSearches;
+    private JLabel statVehicles, statSlots;
+    private Runnable onResetCallback;
+
+    public void setOnResetCallback(Runnable r) { this.onResetCallback = r; }
 
     private final RecordManager recordManager;
     private final ParkingMap  parkingMap;
@@ -52,35 +55,45 @@ public class DashboardPanel extends JPanel {
         left.add(title);
         left.add(sub);
 
-        p.add(left, BorderLayout.WEST);
-        p.add(UITheme.makeBadge("● SYSTEM ONLINE", UITheme.SUCCESS), BorderLayout.EAST);
+        JButton resetBtn = UITheme.makeButton("Reset System", UITheme.DANGER);
+        resetBtn.addActionListener(e -> {
+            if (showResetConfirm()) {
+                if (onResetCallback != null) onResetCallback.run();
+            }
+        });
+
+        p.add(left,     BorderLayout.WEST);
+        p.add(resetBtn, BorderLayout.EAST);
         return p;
     }
 
     // ── Main content ──────────────────────────────────────────────────────────
     private JPanel buildContent() {
-        JPanel p = new JPanel(new BorderLayout(0, 14));
+        statVehicles = valueLabel("0", UITheme.ACCENT);
+        statSlots    = valueLabel("0", UITheme.SUCCESS);
+
+        JPanel p = new JPanel(new GridBagLayout());
         p.setOpaque(false);
-        p.add(buildStatRow(),   BorderLayout.NORTH);
-        p.add(buildMiddleRow(), BorderLayout.CENTER);
+        GridBagConstraints g = new GridBagConstraints();
+        g.fill = GridBagConstraints.BOTH;
+
+        // Row 0 — stat cards (natural height, not stretched vertically)
+        g.gridy = 0; g.weighty = 0;
+        g.gridx = 0; g.weightx = 0.62; g.insets = new Insets(0, 0, 14, 0);
+        p.add(statCard("Active Vehicles", statVehicles, "Linked List (O1 add)"), g);
+
+        g.gridx = 1; g.weightx = 0.38; g.insets = new Insets(0, 14, 14, 0);
+        p.add(statCard("Available Slots", statSlots, "Min Heap (Olog n)"), g);
+
+        // Row 1 — main panels (stretch to fill remaining height)
+        g.gridy = 1; g.weighty = 1.0;
+        g.gridx = 0; g.weightx = 0.62; g.insets = new Insets(0, 0, 0, 0);
+        p.add(buildParkingMapCard(), g);
+
+        g.gridx = 1; g.weightx = 0.38; g.insets = new Insets(0, 14, 0, 0);
+        p.add(buildModulesCard(), g);
+
         return p;
-    }
-
-    // ── Stat cards ────────────────────────────────────────────────────────────
-    private JPanel buildStatRow() {
-        JPanel row = new JPanel(new GridLayout(1, 4, 14, 0));
-        row.setOpaque(false);
-
-        statVehicles = valueLabel("0",   UITheme.ACCENT);
-        statSlots    = valueLabel("0",   UITheme.SUCCESS);
-        statUtil     = valueLabel("0 %", UITheme.WARNING);
-        statSearches = valueLabel("0",   UITheme.INFO);
-
-        row.add(statCard("Active Vehicles",  statVehicles, "↑ Linked List (O1 add)"));
-        row.add(statCard("Available Slots",  statSlots,    "★ Min Heap (Olog n)"));
-        row.add(statCard("Lot Utilization",  statUtil,     "⇌ Graph / Dijkstra"));
-        row.add(statCard("Index Entries",    statSearches, "⌕ AVL Tree  |  ⚡ HashMap"));
-        return row;
     }
 
     private JPanel statCard(String label, JLabel valLabel, String ds) {
@@ -104,23 +117,6 @@ public class DashboardPanel extends JPanel {
         return l;
     }
 
-    // ── Middle: parking map (62%) + modules (38%) ────────────────────────────
-    private JPanel buildMiddleRow() {
-        JPanel row = new JPanel(new GridBagLayout());
-        row.setOpaque(false);
-        GridBagConstraints g = new GridBagConstraints();
-        g.fill = GridBagConstraints.BOTH;
-        g.weighty = 1.0;
-        g.gridy = 0;
-
-        g.gridx = 0; g.weightx = 0.62;
-        row.add(buildParkingMapCard(), g);
-
-        g.gridx = 1; g.weightx = 0.38;
-        g.insets = new Insets(0, 14, 0, 0);
-        row.add(buildModulesCard(), g);
-        return row;
-    }
 
     // ── Live Parking Map card ─────────────────────────────────────────────────
     private JPanel buildParkingMapCard() {
@@ -473,14 +469,45 @@ public class DashboardPanel extends JPanel {
         int vehicles = recordManager.getVehicleCount();
         int totalSlots = recordManager.getParkingSlotCount();
         int availableSlots = parkingMap == null ? 0 : parkingMap.getFreeCount();
-        int occupiedSlots = parkingMap == null ? 0 : parkingMap.getOccupiedCount();
-        int indexEntries = vehicles + totalSlots;
-
         statVehicles.setText(String.valueOf(vehicles));
         statSlots.setText(String.valueOf(availableSlots));
-        int pct = totalSlots == 0 ? 0 : (occupiedSlots * 100 / totalSlots);
-        statUtil.setText(pct + " %");
-        statSearches.setText(String.valueOf(indexEntries));
+    }
+
+    private boolean showResetConfirm() {
+        JDialog dialog = new JDialog(SwingUtilities.getWindowAncestor(this), "Reset System",
+                java.awt.Dialog.ModalityType.APPLICATION_MODAL);
+        dialog.setUndecorated(true);
+        dialog.getRootPane().setBorder(BorderFactory.createLineBorder(UITheme.BORDER_LIGHT, 1));
+
+        JPanel root = new JPanel(new BorderLayout(0, 20));
+        root.setBackground(UITheme.BG_CARD);
+        root.setBorder(new EmptyBorder(28, 32, 24, 32));
+
+        JLabel msg = new JLabel("Reset all panels and data to default?");
+        msg.setFont(UITheme.FONT_SUBTITLE);
+        msg.setForeground(UITheme.TEXT_PRIMARY);
+        msg.setHorizontalAlignment(SwingConstants.CENTER);
+        root.add(msg, BorderLayout.CENTER);
+
+        boolean[] confirmed = {false};
+
+        JButton yes = UITheme.makeButton("Yes, Reset", UITheme.DANGER);
+        JButton no  = UITheme.makeButton("Cancel",     UITheme.BG_INPUT);
+        no.setForeground(UITheme.TEXT_SECONDARY);
+        yes.addActionListener(ev -> { confirmed[0] = true;  dialog.dispose(); });
+        no .addActionListener(ev -> dialog.dispose());
+
+        JPanel btns = new JPanel(new FlowLayout(FlowLayout.CENTER, 12, 0));
+        btns.setOpaque(false);
+        btns.add(no);
+        btns.add(yes);
+        root.add(btns, BorderLayout.SOUTH);
+
+        dialog.setContentPane(root);
+        dialog.pack();
+        dialog.setLocationRelativeTo(this);
+        dialog.setVisible(true);
+        return confirmed[0];
     }
 
     private void refreshAll() {
@@ -556,9 +583,5 @@ public class DashboardPanel extends JPanel {
     public void refresh(int vehicles, int slotsAvail, int totalSlots, int indexEntries) {
         statVehicles.setText(String.valueOf(vehicles));
         statSlots.setText(String.valueOf(slotsAvail));
-        int occupiedSlots = Math.max(totalSlots - slotsAvail, 0);
-        int pct = totalSlots == 0 ? 0 : (occupiedSlots * 100 / totalSlots);
-        statUtil.setText(pct + " %");
-        statSearches.setText(String.valueOf(indexEntries));
     }
 }

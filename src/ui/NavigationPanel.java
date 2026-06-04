@@ -43,6 +43,7 @@ public class NavigationPanel extends JPanel {
     private String               routedSlot  = null;
     private String               routedStartNode = DEFAULT_ACCESS_NODE;
     private String               lastDirections = "";
+    private JTextArea            directionsArea;
 
     public NavigationPanel(ActivityLog log, RecordManager records, ParkingMap parkingMap) {
         this.log        = log;
@@ -85,11 +86,17 @@ public class NavigationPanel extends JPanel {
         return p;
     }
 
-    // ── Body: big map (center) + bubble strip (south) ────────────────────────
+    // ── Body: big map (center) + directions (east) + bubble strip (south) ──────
     private JPanel buildBody() {
         JPanel body = new JPanel(new BorderLayout(0, 14));
         body.setOpaque(false);
-        body.add(buildMapCard(),     BorderLayout.CENTER);
+
+        JPanel centerRow = new JPanel(new BorderLayout(14, 0));
+        centerRow.setOpaque(false);
+        centerRow.add(buildMapCard(),         BorderLayout.CENTER);
+        centerRow.add(buildDirectionsPanel(), BorderLayout.EAST);
+
+        body.add(centerRow,          BorderLayout.CENTER);
         body.add(buildBubbleStrip(), BorderLayout.SOUTH);
         return body;
     }
@@ -99,6 +106,33 @@ public class NavigationPanel extends JPanel {
         card.add(UITheme.makeSectionTitle("Lot Map"), BorderLayout.NORTH);
         canvas = new LotMapCanvas();
         card.add(canvas, BorderLayout.CENTER);
+        return card;
+    }
+
+    private JPanel buildDirectionsPanel() {
+        JPanel card = UITheme.makeCard(new BorderLayout(0, 10));
+        card.setPreferredSize(new Dimension(300, 0));
+
+        JLabel title = new JLabel("Directions");
+        title.setFont(UITheme.FONT_TITLE);
+        title.setForeground(UITheme.ACCENT_HOVER);
+        card.add(title, BorderLayout.NORTH);
+
+        directionsArea = new JTextArea("Select a vehicle bubble\nto see its directions.");
+        directionsArea.setEditable(false);
+        directionsArea.setLineWrap(true);
+        directionsArea.setWrapStyleWord(true);
+        directionsArea.setFont(UITheme.FONT_BODY);
+        directionsArea.setBackground(UITheme.BG_CARD);
+        directionsArea.setForeground(UITheme.TEXT_PRIMARY);
+        directionsArea.setBorder(new EmptyBorder(8, 4, 8, 4));
+
+        JScrollPane scroll = new JScrollPane(directionsArea,
+                JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED,
+                JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
+        scroll.setBorder(null);
+        scroll.getViewport().setBackground(UITheme.BG_CARD);
+        card.add(scroll, BorderLayout.CENTER);
         return card;
     }
 
@@ -114,10 +148,10 @@ public class NavigationPanel extends JPanel {
                 JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
         scroll.setBorder(null);
         scroll.getViewport().setBackground(UITheme.BG_CARD);
-        scroll.setPreferredSize(new Dimension(0, 140));
+        scroll.setPreferredSize(new Dimension(0, 170));
 
         card.add(scroll, BorderLayout.CENTER);
-        card.setPreferredSize(new Dimension(0, 200));
+        card.setPreferredSize(new Dimension(0, 230));
         return card;
     }
 
@@ -161,32 +195,32 @@ public class NavigationPanel extends JPanel {
 
     private JPanel buildVehicleBubble(Vehicle v) {
         JPanel b = new JPanel(null);
-        b.setPreferredSize(new Dimension(200, 110));
+        b.setPreferredSize(new Dimension(250, 140));
         b.setBackground(UITheme.BG_CARD);
         b.setBorder(BorderFactory.createLineBorder(UITheme.BORDER, 1));
 
         JLabel plate = new JLabel(v.getLicensePlate());
-        plate.setFont(new Font("Segoe UI", Font.BOLD, 16));
+        plate.setFont(new Font("Segoe UI", Font.BOLD, 22));
         plate.setForeground(UITheme.TEXT_PRIMARY);
-        plate.setBounds(12, 10, 176, 22);
+        plate.setBounds(14, 12, 222, 28);
 
         JLabel owner = new JLabel(v.getOwnerName());
-        owner.setFont(UITheme.FONT_BODY);
+        owner.setFont(new Font("Segoe UI", Font.PLAIN, 16));
         owner.setForeground(UITheme.TEXT_SECONDARY);
-        owner.setBounds(12, 36, 176, 18);
+        owner.setBounds(14, 46, 222, 22);
 
         String slotId = v.getAssignedSlotId();
         JLabel slot;
         if (slotId != null) {
             slot = new JLabel("Slot  " + slotId);
-            slot.setFont(UITheme.FONT_MONO);
+            slot.setFont(new Font("Consolas", Font.BOLD, 17));
             slot.setForeground(UITheme.SUCCESS);
         } else {
             slot = new JLabel("(no slot assigned)");
-            slot.setFont(UITheme.FONT_SMALL);
+            slot.setFont(new Font("Segoe UI", Font.PLAIN, 15));
             slot.setForeground(UITheme.TEXT_MUTED);
         }
-        slot.setBounds(12, 76, 176, 20);
+        slot.setBounds(14, 98, 222, 24);
 
         b.add(plate);
         b.add(owner);
@@ -223,6 +257,20 @@ public class NavigationPanel extends JPanel {
 
     // ── Click → route ────────────────────────────────────────────────────────
     private void selectVehicle(Vehicle v) {
+        // Clicking the already-selected bubble deselects it
+        if (v.getLicensePlate().equals(routedPlate)) {
+            routedPlate    = null;
+            routedSlot     = null;
+            lastDirections = "";
+            currentPath    = new java.util.ArrayList<>();
+            if (directionsArea != null)
+                directionsArea.setText("Select a vehicle bubble\nto see its directions.");
+            status(" ", UITheme.TEXT_MUTED);
+            applySelectionBorders();
+            canvas.repaint();
+            return;
+        }
+
         String startNode = DEFAULT_ACCESS_NODE;
         routedStartNode = startNode;
 
@@ -250,9 +298,11 @@ public class NavigationPanel extends JPanel {
             return;
         }
 
+        int totalDist = DijkstraPathfinder.calculatePathCost(graph, currentPath);
         routedPlate    = v.getLicensePlate();
         routedSlot     = norm;
-                    lastDirections = buildDirections(currentPath, DEFAULT_ACCESS_NODE);
+        lastDirections = buildDirections(currentPath, DEFAULT_ACCESS_NODE, totalDist);
+        if (directionsArea != null) directionsArea.setText(lastDirections);
 
         status("Route to " + norm + "  (" + (currentPath.size() - 1) + " hops · " + us + " µs)",
                UITheme.SUCCESS);
@@ -333,6 +383,7 @@ public class NavigationPanel extends JPanel {
             routedPlate    = null;
             routedSlot     = null;
             lastDirections = "";
+            if (directionsArea != null) directionsArea.setText("Select a vehicle bubble\nto see its directions.");
             status("Route cleared — vehicle no longer assigned to that slot.", UITheme.WARNING);
             applySelectionBorders();
             if (canvas != null) canvas.repaint();
@@ -350,9 +401,10 @@ public class NavigationPanel extends JPanel {
     }
 
     // ── Path → human directions ──────────────────────────────────────────────
-    private String buildDirections(List<String> path, String startNode) {
+    private String buildDirections(List<String> path, String startNode, int distMetres) {
         if (path.size() < 2) return "Already at destination.";
         StringBuilder sb = new StringBuilder();
+
         int step = 1;
         sb.append(step++)
           .append(". Depart ")
@@ -479,47 +531,7 @@ public class NavigationPanel extends JPanel {
             drawPin(g2, "ENTRANCE", 470, 580, UITheme.SUCCESS,        s, ox, oy);
             drawPin(g2, "EXIT",     530, 580, new Color(220, 60, 60), s, ox, oy);
 
-            if (!lastDirections.isEmpty()) {
-                drawDirectionsOverlay(g2);
-            }
-
             g2.dispose();
-        }
-
-        private void drawDirectionsOverlay(Graphics2D g) {
-            String[] lines = lastDirections.split("\n");
-            Font font = new Font("Segoe UI", Font.PLAIN, 12);
-            g.setFont(font);
-            FontMetrics fm = g.getFontMetrics();
-            int padding = 12;
-            int lineH   = fm.getHeight();
-            int boxW = 0;
-            for (String ln : lines) boxW = Math.max(boxW, fm.stringWidth(ln));
-            boxW += padding * 2;
-            int boxH = lineH * lines.length + padding * 2 + 4;
-            int boxX = getWidth() - boxW - 16;
-            int boxY = 16;
-            if (boxX < 8) boxX = 8;
-
-            g.setColor(new Color(0, 0, 0, 175));
-            g.fillRoundRect(boxX, boxY, boxW, boxH, 12, 12);
-            g.setColor(UITheme.BORDER_LIGHT);
-            g.setStroke(new BasicStroke(1f));
-            g.drawRoundRect(boxX, boxY, boxW, boxH, 12, 12);
-
-            // Header line
-            g.setColor(UITheme.ACCENT_HOVER);
-            g.setFont(new Font("Segoe UI", Font.BOLD, 12));
-            g.drawString("Directions", boxX + padding, boxY + padding + fm.getAscent() - 2);
-
-            // Body
-            g.setColor(UITheme.TEXT_PRIMARY);
-            g.setFont(font);
-            int y = boxY + padding + lineH + 4;
-            for (String ln : lines) {
-                g.drawString(ln, boxX + padding, y);
-                y += lineH;
-            }
         }
 
         private void fillLogicalRect(Graphics2D g, double x1, double y1, double x2, double y2,
@@ -551,20 +563,27 @@ public class NavigationPanel extends JPanel {
                 int w  = (int)(cellW * s);
                 int h  = (int)(cellH * s);
                 boolean occ = parkingMap.isOccupied(i);
+                boolean isDest = !currentPath.isEmpty()
+                              && currentPath.get(currentPath.size() - 1).equals(id);
+
+                // Fill — always use original occupied/free colour
                 g.setColor(occ ? new Color(60, 18, 18) : new Color(14, 80, 36));
                 g.fillRoundRect(cx - w/2, cy - h/2, w, h, 8, 8);
+
+                // Normal border (untouched)
                 g.setColor(occ ? new Color(150, 40, 40) : new Color(22, 130, 58));
                 g.setStroke(new BasicStroke(1.4f));
                 g.drawRoundRect(cx - w/2, cy - h/2, w, h, 8, 8);
 
-                boolean isDest = !currentPath.isEmpty()
-                              && currentPath.get(currentPath.size() - 1).equals(id);
+                // Destination: extra outer ring drawn OUTSIDE the slot — never touches fill or text
                 if (isDest) {
+                    int pad = 5;
                     g.setColor(UITheme.ACCENT_HOVER);
-                    g.setStroke(new BasicStroke(3.2f));
-                    g.drawRoundRect(cx - w/2 - 3, cy - h/2 - 3, w + 6, h + 6, 10, 10);
+                    g.setStroke(new BasicStroke(3.0f));
+                    g.drawRoundRect(cx - w/2 - pad, cy - h/2 - pad, w + pad*2, h + pad*2, 14, 14);
                 }
 
+                // Text — unchanged
                 g.setColor(occ ? new Color(220, 80, 80) : UITheme.SUCCESS);
                 g.setFont(new Font("Segoe UI", Font.BOLD, (int)Math.max(10, 12 * s)));
                 FontMetrics fm = g.getFontMetrics();
@@ -650,6 +669,7 @@ public class NavigationPanel extends JPanel {
             g.setStroke(new BasicStroke((float)Math.max(1.5, 1.8*s),
                 BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
             g.drawPolyline(drawX, drawY, drawX.length);
+
         }
 
         private void drawPin(Graphics2D g, String label, double lx, double ly, Color color,

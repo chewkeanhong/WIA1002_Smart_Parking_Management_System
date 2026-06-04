@@ -66,6 +66,11 @@ public class GateProcessor {
     public EntryQueue getEntryQueue() { return entryQueue; }
     public UndoStack  getUndoStack()  { return undoStack;  }
 
+    public void clearAll() {
+        while (entryQueue.dequeue() != null) { /* drain queue */ }
+        while (undoStack.pop()      != null) { /* drain stack */ }
+    }
+
     /**
      * Cancels every trace of a vehicle inside the gate — removes it from the queue if still there,
      * and removes any ENQUEUED / PROCESSED / EXITED actions referencing it from the undo stack.

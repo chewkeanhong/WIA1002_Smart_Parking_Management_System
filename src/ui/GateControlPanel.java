@@ -119,7 +119,7 @@ public class GateControlPanel extends JPanel {
         approveLeft.add(approveTitle);
         approveLeft.add(approveNextLabel);
 
-        approveBtn = UITheme.makeButton("✓  Approve", new Color(22, 100, 50));
+        approveBtn = UITheme.makeButton("Approve", new Color(22, 100, 50));
         approveBtn.setFont(new Font("Segoe UI", Font.BOLD, 13));
         approveBtn.setEnabled(false);
         approveBtn.setPreferredSize(new Dimension(110, 36));
@@ -170,7 +170,7 @@ public class GateControlPanel extends JPanel {
         top.add(hdr);
         top.add(Box.createVerticalStrut(10));
 
-        JButton undoBtn = UITheme.makeButton("↩  Undo Last Action", UITheme.WARNING);
+        JButton undoBtn = UITheme.makeButton("Undo Last Action", UITheme.WARNING);
         undoBtn.setForeground(UITheme.BG_DARK);
         undoBtn.setFont(new Font("Segoe UI", Font.BOLD, 13));
         undoBtn.setAlignmentX(Component.LEFT_ALIGNMENT);
