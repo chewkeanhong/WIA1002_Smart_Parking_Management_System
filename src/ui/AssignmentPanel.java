@@ -370,7 +370,25 @@ public class AssignmentPanel extends JPanel {
 
         String gateNode = normalizeGate((String) gateChoice.getSelectedItem());
         Vehicle existing = records == null ? null : records.findVehicleByPlate(plate);
-        String oldSlotId = existing == null ? null : existing.getAssignedSlotId();
+
+        // Plate must belong to a registered vehicle — no slots for made-up plates.
+        if (existing == null) {
+            status("No registered vehicle with plate " + plate + ". Register/approve it at the gate first.", UITheme.DANGER);
+            return;
+        }
+        // Owner name must match the one registered for this plate.
+        if (!existing.getOwnerName().equalsIgnoreCase(owner)) {
+            status("Owner name does not match plate " + plate + " (registered to " + existing.getOwnerName() + ").", UITheme.DANGER);
+            return;
+        }
+        // Gate must match the one the vehicle registered/entered with.
+        String registeredGate = existing.getPreferredGateId();
+        if (registeredGate != null && !registeredGate.equalsIgnoreCase(gateNode)) {
+            status("Gate does not match plate " + plate + " (registered at " + prettyGate(registeredGate) + ").", UITheme.DANGER);
+            return;
+        }
+
+        String oldSlotId = existing.getAssignedSlotId();
 
         refreshHeapForGate();
         if (!allocator.hasAvailableSlots()) { status("No available slots for the selected gate.", UITheme.WARNING); return; }
@@ -380,8 +398,7 @@ public class AssignmentPanel extends JPanel {
             currentCost = computeRouteCost(gateNode, oldSlotId);
         }
 
-        Vehicle v = existing != null ? existing : new Vehicle(plate, owner, System.currentTimeMillis());
-        v.setOwnerName(owner);
+        Vehicle v = existing;
         v.setPreferredGateId(gateNode);
         ParkingSlot best = allocator.peekBestSlot();
         if (best == null) {
@@ -448,7 +465,7 @@ public class AssignmentPanel extends JPanel {
         String priorText = oldSlotId == null ? "" : " (reassigned from " + oldSlotId + ")";
         log.log("HEAP  Assigned slot " + best.getSlotId() + " (dist=" + best.getDistanceToGate() +
                 "m) to " + plate + " from " + prettyGate(gateNode) + priorText + " — extract-min O(log n)");
-        status((existing == null ? "Assigned: " : "Reassigned: ") + best.getSlotId() + " from " + prettyGate(gateNode) + " — O(log n).", UITheme.SUCCESS);
+        status((oldSlotId == null ? "Assigned: " : "Reassigned: ") + best.getSlotId() + " from " + prettyGate(gateNode) + " — O(log n).", UITheme.SUCCESS);
         resultLabel.setText("✓  " + plate + "  →  Slot " + best.getSlotId() +
                             "  (route: " + best.getDistanceToGate() + " m, from " + prettyGate(gateNode) +
                             (oldSlotId == null ? "" : ", reassigned from " + oldSlotId) + ")");
