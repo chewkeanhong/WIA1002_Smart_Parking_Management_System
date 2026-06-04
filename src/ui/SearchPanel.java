@@ -29,7 +29,7 @@ public class SearchPanel extends JPanel {
     private JTable     vehicleTable;
 
     private final DefaultTableModel tableModel = new DefaultTableModel(
-        new String[]{"#", "Licence Plate", "Owner", "Entry Time", "Slot"}, 0) {
+        new String[]{"#", "Licence Plate", "Owner", "Entry Gate", "Entry Time", "Slot"}, 0) {
         public boolean isCellEditable(int r, int c) { return false; }
     };
 
@@ -141,10 +141,21 @@ public class SearchPanel extends JPanel {
                 i + 1,
                 v.getLicensePlate(),
                 v.getOwnerName(),
+                prettyGateLabel(v.getPreferredGateId()),
                 new java.text.SimpleDateFormat("HH:mm:ss")
                     .format(new java.util.Date(v.getEntryTime())),
                 v.getAssignedSlotId() != null ? v.getAssignedSlotId() : "—"
             });
+        }
+    }
+
+    private String prettyGateLabel(String gateId) {
+        if (gateId == null) return "Nearest Entrance";
+        switch (gateId) {
+            case "GATE_A": return "Gate A";
+            case "GATE_B": return "Gate B";
+            case "GATE_C": return "Gate C";
+            default:       return "Nearest Entrance";
         }
     }
 

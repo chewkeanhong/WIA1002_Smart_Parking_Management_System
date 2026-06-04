@@ -91,6 +91,7 @@ public class MainFrame extends JFrame {
         assignmentPanel.setUserPanel(userPanel);
         assignmentPanel.setRetrievalPanel(retrievalPanel);
         managementPanel.setRetrievalPanel(retrievalPanel);
+        retrievalPanel.setParkingMap(parkingMap);
 
         contentArea.add(dashboardPanel,   "Dashboard");
         contentArea.add(gateControlPanel, "Entry / Exit");
@@ -213,7 +214,16 @@ public class MainFrame extends JFrame {
     }
 
     // ── Navigation ────────────────────────────────────────────────────────────
+    private static final int SLOT_PRIORITY_IDX = 2;
+    private int currentIdx = 0;
+
     private void showPanel(int idx) {
+        // Leaving Slot Priority → reset it to default
+        if (currentIdx == SLOT_PRIORITY_IDX && idx != SLOT_PRIORITY_IDX && assignmentPanel != null) {
+            assignmentPanel.resetQuiet();
+        }
+        currentIdx = idx;
+
         for (int i = 0; i < navBtns.length; i++) {
             boolean active = (i == idx);
             navBtns[i].setBackground(active ? UITheme.ACCENT      : UITheme.BG_SIDEBAR);

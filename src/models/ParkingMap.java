@@ -35,6 +35,8 @@ public class ParkingMap {
 
     public boolean isOccupied(int i) { return i >= 0 && i < TOTAL && occupied[i]; }
 
+    public boolean isOccupied(String id) { int i = idx(id); return i >= 0 && occupied[i]; }
+
     /** Returns the slot ID of the first free bay, or null if the lot is full. */
     public String findFirstFree() {
         for (int i = 0; i < TOTAL; i++) if (!occupied[i]) return slotId(i);

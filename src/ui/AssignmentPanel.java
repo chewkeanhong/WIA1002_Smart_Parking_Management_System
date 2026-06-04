@@ -345,7 +345,8 @@ public class AssignmentPanel extends JPanel {
 
         ParkingSlot slot = findRegisteredSlot(id);
         RouteGraph.Node node = routeGraph.getNode(id);
-        if ((slot != null && slot.isOccupied()) || (node != null && node.isOccupied)) {
+        boolean liveOccupied = parkingMap != null && parkingMap.isOccupied(id);
+        if ((slot != null && slot.isOccupied()) || (node != null && node.isOccupied) || liveOccupied) {
             status("Slot " + id + " is currently occupied and cannot be added to the heap.", UITheme.DANGER);
             return;
         }
@@ -587,7 +588,7 @@ public class AssignmentPanel extends JPanel {
         }
     }
 
-    private void resetAll() {
+    public void resetAll() {
         registeredSlots.clear();
         allocator.clearSlots();
         gateChoice.setSelectedIndex(0);
@@ -600,6 +601,21 @@ public class AssignmentPanel extends JPanel {
         heapCanvas.repaint();
         log.log("HEAP  Panel reset to default state.");
         status("Reset complete.", UITheme.SUCCESS);
+    }
+
+    /** Quietly reset without logging — used when navigating away from the panel. */
+    public void resetQuiet() {
+        registeredSlots.clear();
+        allocator.clearSlots();
+        gateChoice.setSelectedIndex(0);
+        heapGateChoice.setSelectedIndex(0);
+        tfSlotId.setText("");
+        tfVPlate.setText("");
+        tfVOwner.setText("");
+        resultLabel.setText(" ");
+        statusLabel.setText(" ");
+        heapTableModel.setRowCount(0);
+        heapCanvas.repaint();
     }
 
     private void status(String msg, Color color) {

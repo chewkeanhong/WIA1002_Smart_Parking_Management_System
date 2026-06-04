@@ -4,6 +4,7 @@ import retrieval.FastAccessor;
 import management.RecordManager;
 import models.Vehicle;
 import models.ParkingSlot;
+import models.ParkingMap;
 
 import javax.swing.*;
 import javax.swing.border.*;
@@ -21,6 +22,9 @@ public class RetrievalPanel extends JPanel {
     private final ActivityLog   log;
     private final RecordManager records;
     private final FastAccessor  fa = new FastAccessor();
+    private ParkingMap          parkingMap;
+
+    public void setParkingMap(ParkingMap pm) { this.parkingMap = pm; }
 
     // Input fields
     private JTextField tfPlate, tfOwner, tfSlotId, tfDist;
@@ -54,6 +58,9 @@ public class RetrievalPanel extends JPanel {
         add(buildHeader(),     BorderLayout.NORTH);
         add(buildBody(),       BorderLayout.CENTER);
         add(buildComplexity(), BorderLayout.SOUTH);
+
+        // Auto-refresh so approvals from any panel (User gate flow, Management, Slot Priority) show up
+        new javax.swing.Timer(1000, e -> refreshTables()).start();
     }
 
     // ── Header ────────────────────────────────────────────────────────────────
@@ -282,8 +289,18 @@ public class RetrievalPanel extends JPanel {
             status("Removed slot " + id + " — O(1).", UITheme.WARNING);
             if (records != null) {
                 ParkingSlot existing = records.findSlotById(id);
-                if (existing != null) records.removeParkingSlotRecord(existing);
+                if (existing != null) {
+                    // Detach any vehicle parked in this slot
+                    Vehicle parked = existing.getParkedVehicle();
+                    if (parked != null) {
+                        parked.setAssignedSlotId(null);
+                        existing.setParkedVehicle(null);
+                    }
+                    records.removeParkingSlotRecord(existing);
+                }
             }
+            // Free the live parking map so every panel reflects the removal
+            if (parkingMap != null) parkingMap.markFree(id);
         } else {
             status("Slot " + id + " not in cache.", UITheme.DANGER);
         }
@@ -303,7 +320,7 @@ public class RetrievalPanel extends JPanel {
             log.log("CACHE  get(vehicle, " + plate + ") → HIT — O(1)");
             status("Cache HIT for " + plate + " — O(1).", UITheme.SUCCESS);
         } else {
-            lookupResultLabel.setText("✗  Cache MISS: " + plate + " not found");
+            lookupResultLabel.setText("Cache MISS: " + plate + " not found");
             lookupResultLabel.setForeground(UITheme.DANGER);
             log.log("CACHE  get(vehicle, " + plate + ") → MISS — O(1)");
             status("Cache MISS — O(1).", UITheme.DANGER);
@@ -322,7 +339,7 @@ public class RetrievalPanel extends JPanel {
             log.log("CACHE  get(slot, " + id + ") → HIT — O(1)");
             status("Cache HIT for slot " + id + " — O(1).", UITheme.SUCCESS);
         } else {
-            lookupResultLabel.setText("✗  Cache MISS: slot " + id + " not found");
+            lookupResultLabel.setText("Cache MISS: slot " + id + " not found");
             lookupResultLabel.setForeground(UITheme.DANGER);
             log.log("CACHE  get(slot, " + id + ") → MISS — O(1)");
             status("Cache MISS — O(1).", UITheme.DANGER);
@@ -356,8 +373,8 @@ public class RetrievalPanel extends JPanel {
                              fa.getSlotMap().getCapacity());
     }
 
-    /** Called externally after any approval/assignment to keep cache in sync. */
-    public void syncCaches() { syncCachesFromRecords(); }
+    /** Called externally after any approval/assignment to keep cache + tables in sync. */
+    public void syncCaches() { refreshTables(); }
 
     private void syncCachesFromRecords() {
         if (records == null) {

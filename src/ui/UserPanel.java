@@ -860,6 +860,8 @@ public class UserPanel extends JPanel {
                 ParkingSlot slotRecord = records.findSlotById(slotId);
                 if (slotRecord != null) {
                     slotRecord.setParkedVehicle(null);
+                    // Remove the slot record entirely so it disappears from every panel
+                    records.removeParkingSlotRecord(slotRecord);
                 }
             }
             vehicle.setAssignedSlotId(null);
