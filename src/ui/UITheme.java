@@ -35,13 +35,13 @@ public class UITheme {
     public static final Color BORDER_LIGHT = new Color(68, 74, 81);
 
     // ── Fonts ─────────────────────────────────────────────────────────────────
-    public static final Font FONT_BRAND    = new Font("Segoe UI", Font.BOLD,  22);
-    public static final Font FONT_TITLE    = new Font("Segoe UI", Font.BOLD,  18);
-    public static final Font FONT_SUBTITLE = new Font("Segoe UI", Font.BOLD,  13);
-    public static final Font FONT_BODY     = new Font("Segoe UI", Font.PLAIN, 13);
-    public static final Font FONT_SMALL    = new Font("Segoe UI", Font.PLAIN, 11);
-    public static final Font FONT_LABEL    = new Font("Segoe UI", Font.PLAIN, 12);
-    public static final Font FONT_MONO     = new Font("Consolas",  Font.PLAIN, 12);
+    public static final Font FONT_BRAND    = new Font("Segoe UI", Font.BOLD,  26);
+    public static final Font FONT_TITLE    = new Font("Segoe UI", Font.BOLD,  22);
+    public static final Font FONT_SUBTITLE = new Font("Segoe UI", Font.BOLD,  15);
+    public static final Font FONT_BODY     = new Font("Segoe UI", Font.PLAIN, 15);
+    public static final Font FONT_SMALL    = new Font("Segoe UI", Font.PLAIN, 13);
+    public static final Font FONT_LABEL    = new Font("Segoe UI", Font.PLAIN, 14);
+    public static final Font FONT_MONO     = new Font("Consolas",  Font.PLAIN, 14);
 
     // ── Button factory ────────────────────────────────────────────────────────
     public static JButton makeButton(String text, Color bg) {
@@ -69,6 +69,7 @@ public class UITheme {
         return makeButton(text, BG_CARD);
     }
 
+    // ── ComboBox styling ──────────────────────────────────────────────────────
     // ── Field factory ─────────────────────────────────────────────────────────
     public static JTextField makeTextField(int cols) {
         JTextField f = new JTextField(cols);
@@ -100,7 +101,7 @@ public class UITheme {
     public static JLabel makeBadge(String text, Color bg) {
         JLabel l = new JLabel(text);
         l.setForeground(Color.WHITE);
-        l.setFont(new Font("Segoe UI", Font.BOLD, 10));
+        l.setFont(new Font("Segoe UI", Font.BOLD, 12));
         l.setBackground(bg);
         l.setOpaque(true);
         l.setBorder(new EmptyBorder(3, 8, 3, 8));
@@ -127,10 +128,10 @@ public class UITheme {
     public static JPanel makeStatCard(String label, String value, Color accent) {
         JPanel card = makeCard(new BorderLayout(0, 6));
         JLabel lbl = new JLabel(label.toUpperCase());
-        lbl.setFont(new Font("Segoe UI", Font.BOLD, 9));
+        lbl.setFont(new Font("Segoe UI", Font.BOLD, 11));
         lbl.setForeground(TEXT_MUTED);
         JLabel val = new JLabel(value);
-        val.setFont(new Font("Segoe UI", Font.BOLD, 28));
+        val.setFont(new Font("Segoe UI", Font.BOLD, 34));
         val.setForeground(accent);
         card.add(lbl, BorderLayout.NORTH);
         card.add(val, BorderLayout.CENTER);

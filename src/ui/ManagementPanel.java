@@ -26,11 +26,14 @@ public class ManagementPanel extends JPanel {
     private final GateProcessor  gate;
     private final UserPanel      userPanel;
     private final ParkingMap     parkingMap;
+    private RetrievalPanel       retrievalPanel;
+
+    public void setRetrievalPanel(RetrievalPanel rp) { this.retrievalPanel = rp; }
     private final RouteGraph     routeGraph = new RouteGraph();
 
     // Vehicle table model
     private final DefaultTableModel vehicleModel = new DefaultTableModel(
-        new String[]{"Licence Plate", "Owner Name", "Entry Time", "Assigned Slot"}, 0) {
+        new String[]{"Licence Plate", "Owner Name", "Entry Gate", "Entry Time", "Assigned Slot"}, 0) {
         public boolean isCellEditable(int r, int c) { return false; }
     };
 
@@ -248,6 +251,7 @@ public class ManagementPanel extends JPanel {
             userPanel.addManagedVehicle(v);
         }
         vehicleModel.addRow(new Object[]{ v.getLicensePlate(), v.getOwnerName(),
+            prettyGateLabel(v.getPreferredGateId()),
             new java.text.SimpleDateFormat("HH:mm:ss").format(new java.util.Date(v.getEntryTime())),
             v.getAssignedSlotId() != null ? v.getAssignedSlotId() : "—" });
 
@@ -334,11 +338,15 @@ public class ManagementPanel extends JPanel {
         slot.setParkedVehicle(v);
         v.setAssignedSlotId(id);
 
+        // Remove the vehicle from the gate queue so the User panel auto-approves
+        if (gate != null) gate.purgeVehicle(v);
+
         if (parkingMap != null) {
             parkingMap.markOccupied(id);
         }
         routeGraph.setOccupancy(id, true);
 
+        if (retrievalPanel != null) retrievalPanel.syncCaches();
         log.log("MANAGEMENT  Assigned slot " + id + " to vehicle " + plate + " (" + dist + "m)");
         status("Assigned " + id + " to " + plate + " — distance calculated by system.", UITheme.SUCCESS);
         tfSlotId.setText(""); tfSlotPlate.setText("");
@@ -396,6 +404,7 @@ public class ManagementPanel extends JPanel {
             vehicleModel.addRow(new Object[]{
                 v.getLicensePlate(),
                 v.getOwnerName(),
+                prettyGateLabel(v.getPreferredGateId()),
                 new java.text.SimpleDateFormat("HH:mm:ss").format(new java.util.Date(v.getEntryTime())),
                 v.getAssignedSlotId() != null ? v.getAssignedSlotId() : "—"
             });

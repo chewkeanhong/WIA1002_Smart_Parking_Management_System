@@ -1,6 +1,7 @@
 package ui;
 
 import assignment.PriorityAllocator;
+import gate_control.GateProcessor;
 import management.RecordManager;
 import models.ParkingSlot;
 import models.ParkingMap;
@@ -11,6 +12,7 @@ import navigation.RouteGraph;
 import javax.swing.*;
 import javax.swing.border.*;
 import javax.swing.table.DefaultTableModel;
+import javax.swing.table.TableCellRenderer;
 import java.awt.*;
 import java.util.ArrayList;
 import java.util.List;
@@ -27,6 +29,12 @@ public class AssignmentPanel extends JPanel {
     private final ActivityLog      log;
     private final RecordManager    records;
     private final ParkingMap       parkingMap;
+    private final GateProcessor    gate;
+    private UserPanel              userPanel;
+    private RetrievalPanel         retrievalPanel;
+
+    public void setUserPanel(UserPanel up)           { this.userPanel      = up; }
+    public void setRetrievalPanel(RetrievalPanel rp) { this.retrievalPanel = rp; }
     private final PriorityAllocator allocator = new PriorityAllocator();
     private final RouteGraph       routeGraph = new RouteGraph();
     private final List<ParkingSlot> registeredSlots = new ArrayList<>();
@@ -58,13 +66,18 @@ public class AssignmentPanel extends JPanel {
     };
 
     public AssignmentPanel(ActivityLog log) {
-        this(log, null, null);
+        this(log, null, null, null);
     }
 
     public AssignmentPanel(ActivityLog log, RecordManager records, ParkingMap parkingMap) {
+        this(log, records, parkingMap, null);
+    }
+
+    public AssignmentPanel(ActivityLog log, RecordManager records, ParkingMap parkingMap, GateProcessor gate) {
         this.log = log;
         this.records = records;
         this.parkingMap = parkingMap;
+        this.gate = gate;
         routeGraph.initializeDashboardLayout();
         setBackground(UITheme.BG_DARK);
         setLayout(new BorderLayout(0, 16));
@@ -90,24 +103,49 @@ public class AssignmentPanel extends JPanel {
         statusLabel.setForeground(UITheme.SUCCESS);
         statusLabel.setHorizontalAlignment(SwingConstants.RIGHT);
 
-        p.add(left,        BorderLayout.WEST);
-        p.add(statusLabel, BorderLayout.EAST);
+        JButton resetBtn = UITheme.makeButton("Reset All", UITheme.DANGER);
+        resetBtn.setFont(UITheme.FONT_SMALL);
+        resetBtn.addActionListener(e -> resetAll());
+
+        JPanel right = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
+        right.setOpaque(false);
+        right.add(statusLabel);
+        right.add(resetBtn);
+
+        p.add(left,  BorderLayout.WEST);
+        p.add(right, BorderLayout.EAST);
         return p;
     }
 
     // ── Body ──────────────────────────────────────────────────────────────────
     private JPanel buildBody() {
-        JPanel p = new JPanel(new GridLayout(1, 2, 14, 0));
+        JPanel p = new JPanel(new GridBagLayout());
         p.setOpaque(false);
-        p.add(buildLeftColumn());
-        p.add(buildRightColumn());
+        GridBagConstraints g = new GridBagConstraints();
+        g.gridy = 0; g.weighty = 1.0;
+
+        // Left: fills full height, narrower width
+        g.gridx = 0; g.weightx = 0.27;
+        g.fill = GridBagConstraints.BOTH;
+        g.anchor = GridBagConstraints.NORTH;
+        p.add(buildLeftColumn(), g);
+
+        // Right: stretches to fill all available vertical space
+        g.gridx = 1; g.weightx = 0.73;
+        g.fill = GridBagConstraints.BOTH;
+        g.anchor = GridBagConstraints.NORTH;
+        g.insets = new Insets(0, 14, 0, 0);
+        p.add(buildRightColumn(), g);
         return p;
     }
 
     // ── Left: add slots + assign ──────────────────────────────────────────────
     private JPanel buildLeftColumn() {
-        JPanel col = new JPanel(new BorderLayout(0, 12));
+        JPanel col = new JPanel(new GridBagLayout());
         col.setOpaque(false);
+        GridBagConstraints lc = new GridBagConstraints();
+        lc.fill = GridBagConstraints.HORIZONTAL;
+        lc.weightx = 1.0; lc.gridx = 0; lc.anchor = GridBagConstraints.NORTH;
 
         // Add slot card
         JPanel addCard = UITheme.makeCard(new BorderLayout(0, 10));
@@ -139,7 +177,8 @@ public class AssignmentPanel extends JPanel {
         form.add(addBtn, gc);
 
         addCard.add(form, BorderLayout.CENTER);
-        col.add(addCard, BorderLayout.NORTH);
+        lc.gridy = 0; lc.insets = new Insets(0, 0, 0, 0);
+        col.add(addCard, lc);
 
         // Assign card
         JPanel assignCard = UITheme.makeCard(new BorderLayout(0, 10));
@@ -191,7 +230,9 @@ public class AssignmentPanel extends JPanel {
 
         assignCard.add(aForm,        BorderLayout.CENTER);
         assignCard.add(resultLabel,  BorderLayout.SOUTH);
-        col.add(assignCard, BorderLayout.CENTER);
+        lc.gridy = 1; lc.insets = new Insets(12, 0, 0, 0);
+        lc.weighty = 1.0; lc.fill = GridBagConstraints.BOTH;
+        col.add(assignCard, lc);
 
         return col;
     }
@@ -249,16 +290,36 @@ public class AssignmentPanel extends JPanel {
         };
         JTable cmpTable = new JTable(cmpModel);
         UITheme.styleTable(cmpTable);
-        cmpTable.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
-        cmpTable.setPreferredScrollableViewportSize(new Dimension(0, 110));
-        cmpTable.getColumnModel().getColumn(0).setPreferredWidth(120);
-        cmpTable.getColumnModel().getColumn(0).setMinWidth(100);
-        cmpTable.getColumnModel().getColumn(1).setPreferredWidth(70);
-        cmpTable.getColumnModel().getColumn(1).setMinWidth(60);
-        cmpTable.getColumnModel().getColumn(2).setPreferredWidth(180);
-        cmpTable.getColumnModel().getColumn(2).setMinWidth(160);
-        cmpTable.getColumnModel().getColumn(3).setPreferredWidth(420);
-        cmpTable.getColumnModel().getColumn(3).setMinWidth(360);
+        cmpTable.setRowSelectionAllowed(false);
+        cmpTable.setColumnSelectionAllowed(false);
+        cmpTable.setCellSelectionEnabled(false);
+        cmpTable.setAutoResizeMode(JTable.AUTO_RESIZE_ALL_COLUMNS);
+        cmpTable.setPreferredScrollableViewportSize(new Dimension(0, 200));
+        cmpTable.getColumnModel().getColumn(0).setPreferredWidth(160);
+        cmpTable.getColumnModel().getColumn(1).setPreferredWidth(140);
+        cmpTable.getColumnModel().getColumn(2).setPreferredWidth(220);
+        cmpTable.getColumnModel().getColumn(3).setPreferredWidth(500);
+
+        // Wrapping cell renderer so long text never gets clipped
+        TableCellRenderer wrapRenderer = (table, value, isSelected, hasFocus, row, colIdx) -> {
+            JTextArea area = new JTextArea(value == null ? "" : value.toString());
+            area.setLineWrap(true);
+            area.setWrapStyleWord(true);
+            area.setFont(UITheme.FONT_BODY);
+            area.setForeground(isSelected ? Color.WHITE : UITheme.TEXT_PRIMARY);
+            area.setBackground(isSelected ? UITheme.ACCENT : UITheme.BG_TABLE_ROW);
+            area.setBorder(new EmptyBorder(8, 10, 8, 10));
+            int colWidth = table.getColumnModel().getColumn(colIdx).getWidth();
+            area.setSize(new Dimension(colWidth, Short.MAX_VALUE));
+            int needed = area.getPreferredSize().height + 8;
+            if (table.getRowHeight(row) < needed) {
+                table.setRowHeight(row, needed);
+            }
+            return area;
+        };
+        for (int i = 0; i < cmpTable.getColumnCount(); i++) {
+            cmpTable.getColumnModel().getColumn(i).setCellRenderer(wrapRenderer);
+        }
         cmpCard.add(UITheme.wrapScroll(cmpTable), BorderLayout.CENTER);
 
         col.add(cmpCard, BorderLayout.SOUTH);
@@ -377,6 +438,11 @@ public class AssignmentPanel extends JPanel {
             }
             slotRecord.setParkedVehicle(v);
         }
+
+        // Remove from gate queue and push to User panel as approved
+        if (gate != null) gate.purgeVehicle(v);
+        if (userPanel != null) userPanel.addManagedVehicle(v);
+        if (retrievalPanel != null) retrievalPanel.syncCaches();
 
         String priorText = oldSlotId == null ? "" : " (reassigned from " + oldSlotId + ")";
         log.log("HEAP  Assigned slot " + best.getSlotId() + " (dist=" + best.getDistanceToGate() +
@@ -519,6 +585,21 @@ public class AssignmentPanel extends JPanel {
             g.setFont(UITheme.FONT_SMALL);
             g.drawString("... +" + (slots.length - 7) + " more nodes (shown in table)", 8, heapCanvas.getHeight() - 8);
         }
+    }
+
+    private void resetAll() {
+        registeredSlots.clear();
+        allocator.clearSlots();
+        gateChoice.setSelectedIndex(0);
+        heapGateChoice.setSelectedIndex(0);
+        tfSlotId.setText("");
+        tfVPlate.setText("");
+        tfVOwner.setText("");
+        resultLabel.setText(" ");
+        heapTableModel.setRowCount(0);
+        heapCanvas.repaint();
+        log.log("HEAP  Panel reset to default state.");
+        status("Reset complete.", UITheme.SUCCESS);
     }
 
     private void status(String msg, Color color) {

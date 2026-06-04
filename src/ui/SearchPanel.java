@@ -173,7 +173,7 @@ public class SearchPanel extends JPanel {
         long us = (System.nanoTime() - t0) / 1000;
 
         if (v == null) {
-            resultLabel.setText("✗  Not found: " + plate);
+            resultLabel.setText("Not found: " + plate);
             resultLabel.setForeground(UITheme.DANGER);
             status("Not found — O(log n) traversal · " + us + " µs", UITheme.DANGER);
             log.log("SEARCH  Not found: " + plate + " (" + us + " µs)");
@@ -181,7 +181,7 @@ public class SearchPanel extends JPanel {
             return;
         }
 
-        resultLabel.setText("✓  " + v.getLicensePlate()
+        resultLabel.setText(v.getLicensePlate()
             + "  —  " + v.getOwnerName()
             + "  —  slot " + (v.getAssignedSlotId() != null ? v.getAssignedSlotId() : "—"));
         resultLabel.setForeground(UITheme.SUCCESS);

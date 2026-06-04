@@ -58,9 +58,8 @@ public class MainFrame extends JFrame {
         this.contentArea = new JPanel(cardLayout);
         this.navBtns = new JButton[NAV.length];
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        setSize(1320, 860);
         setMinimumSize(new Dimension(1060, 680));
-        setLocationRelativeTo(null);
+        setExtendedState(JFrame.MAXIMIZED_BOTH);
         getContentPane().setBackground(UITheme.BG_DARK);
 
         buildUI();
@@ -80,13 +79,18 @@ public class MainFrame extends JFrame {
 
         dashboardPanel   = new DashboardPanel(log, records, parkingMap);
         gateControlPanel = new GateControlPanel(log, gate);
-        assignmentPanel  = new AssignmentPanel(log, records, parkingMap);
+        assignmentPanel  = new AssignmentPanel(log, records, parkingMap, gate);
         searchPanel      = new SearchPanel(log, records);
         navigationPanel  = new NavigationPanel(log, records, parkingMap);
         logsPanel        = new LogsPanel(log);
         retrievalPanel   = new RetrievalPanel(log, records);
         userPanel        = new UserPanel(log, gate, parkingMap, records);
         managementPanel  = new ManagementPanel(log, dashboardPanel, records, gate, userPanel, parkingMap);
+
+        dashboardPanel.setOnResetCallback(this::resetSystem);
+        assignmentPanel.setUserPanel(userPanel);
+        assignmentPanel.setRetrievalPanel(retrievalPanel);
+        managementPanel.setRetrievalPanel(retrievalPanel);
 
         contentArea.add(dashboardPanel,   "Dashboard");
         contentArea.add(gateControlPanel, "Entry / Exit");
@@ -195,6 +199,18 @@ public class MainFrame extends JFrame {
         return p;
     }
 
+
+    // ── System reset ──────────────────────────────────────────────────────────
+    private void resetSystem() {
+        records.clearAll();
+        parkingMap.clearOccupancy();
+        gate.clearAll();
+        contentArea.removeAll();
+        buildContent();
+        contentArea.revalidate();
+        contentArea.repaint();
+        showPanel(0);
+    }
 
     // ── Navigation ────────────────────────────────────────────────────────────
     private void showPanel(int idx) {

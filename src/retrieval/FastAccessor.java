@@ -9,9 +9,9 @@ import models.ParkingSlot;
  */
 public class FastAccessor {
 
-    private final HashMap<String, Vehicle> vehicleMap = new HashMap<>();
-    private final HashMap<String, ParkingSlot> slotMap = new HashMap<>();
-    private final HashMap<String, String> vehicleToSlot = new HashMap<>();
+    private final HashMap<String, Vehicle>    vehicleMap    = new HashMap<>(64);
+    private final HashMap<String, ParkingSlot> slotMap      = new HashMap<>(64);
+    private final HashMap<String, String>      vehicleToSlot = new HashMap<>(64);
 
     // 1. Vehicle cache 
     // Store or update a vehicle using its license plate as the key.
@@ -36,8 +36,13 @@ public class FastAccessor {
     }
 
     // Fetch a slot directly by slot ID.
-    public ParkingSlot getSlot(String slotId) { 
-        return slotMap.get(slotId); 
+    public ParkingSlot getSlot(String slotId) {
+        return slotMap.get(slotId);
+    }
+
+    // Remove a cached slot by slot ID.
+    public boolean removeSlot(String slotId) {
+        return slotMap.remove(slotId);
     }
 
     // Vehicle → Slot mapping

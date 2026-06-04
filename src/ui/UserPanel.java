@@ -48,10 +48,32 @@ public class UserPanel extends JPanel {
         setLayout(new BorderLayout(0, 0));
         setBorder(new EmptyBorder(28, 28, 28, 28));
 
-        bubbleContainer = new JPanel(new FlowLayout(FlowLayout.LEFT, 16, 16));
+        bubbleContainer = new JPanel(new FlowLayout(FlowLayout.LEFT, 16, 16)) {
+            @Override
+            public Dimension getPreferredSize() {
+                int w = (getParent() instanceof JViewport)
+                        ? getParent().getWidth() : super.getPreferredSize().width;
+                FlowLayout fl = (FlowLayout) getLayout();
+                int hgap = fl.getHgap(), vgap = fl.getVgap();
+                int x = hgap, rowH = 0, totalH = vgap;
+                for (Component c : getComponents()) {
+                    if (!c.isVisible()) continue;
+                    Dimension d = c.getPreferredSize();
+                    if (x + d.width + hgap > w && x > hgap) {
+                        totalH += rowH + vgap; x = hgap; rowH = 0;
+                    }
+                    x += d.width + hgap;
+                    rowH = Math.max(rowH, d.height);
+                }
+                totalH += rowH + vgap;
+                return new Dimension(w, totalH);
+            }
+        };
         bubbleContainer.setBackground(UITheme.BG_DARK);
 
-        JScrollPane scroll = UITheme.wrapScroll(bubbleContainer);
+        JScrollPane scroll = new JScrollPane(bubbleContainer,
+                JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED,
+                JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
         scroll.setBorder(null);
         scroll.getViewport().setBackground(UITheme.BG_DARK);
 
@@ -97,7 +119,7 @@ public class UserPanel extends JPanel {
 
         CardLayout cl = new CardLayout();
         JPanel bubble = new JPanel(cl);
-        bubble.setPreferredSize(new Dimension(240, 235));
+        bubble.setPreferredSize(new Dimension(270, 320));
         bubble.setBackground(UITheme.BG_CARD);
         bubble.setBorder(BorderFactory.createLineBorder(UITheme.BORDER, 1));
 
@@ -120,158 +142,214 @@ public class UserPanel extends JPanel {
     // ── State 1: Input form ───────────────────────────────────────────────────
 
     private JPanel buildInputCard(JPanel bubble, CardLayout cl, int number) {
-        JPanel p = new JPanel(null);
+        JPanel p = new JPanel(new BorderLayout(0, 0));
         p.setBackground(UITheme.BG_CARD);
+        p.setBorder(new EmptyBorder(16, 18, 18, 18));
 
-        JLabel title = new JLabel("Vehicle #" + number);
-        title.setFont(UITheme.FONT_SUBTITLE);
+        // Header
+        JPanel header = new JPanel(new BorderLayout());
+        header.setOpaque(false);
+        header.setBorder(new EmptyBorder(0, 0, 14, 0));
+        JLabel title = new JLabel("Vehicle Entry");
+        title.setFont(new Font("Segoe UI", Font.BOLD, 18));
         title.setForeground(UITheme.TEXT_PRIMARY);
-        title.setBounds(12, 10, 140, 18);
-
         JButton closeBtn = makeXBtn(UITheme.BG_CARD);
-        closeBtn.setBounds(200, 2, 32, 32);
         closeBtn.addActionListener(e -> removeBubble(bubble));
+        header.add(title,    BorderLayout.WEST);
+        header.add(closeBtn, BorderLayout.EAST);
 
-        JLabel plateLabel = UITheme.makeLabel("Vehicle Plate");
-        plateLabel.setFont(new Font("Segoe UI", Font.PLAIN, 11));
-        plateLabel.setBounds(12, 38, 110, 14);
+        // Form
+        JPanel form = new JPanel(new GridBagLayout());
+        form.setOpaque(false);
+        GridBagConstraints gc = new GridBagConstraints();
+        gc.fill = GridBagConstraints.HORIZONTAL;
+        gc.weightx = 1.0;
+        gc.gridx = 0;
+        gc.insets = new Insets(0, 0, 4, 0);
 
         JTextField plateField = makeField();
-        plateField.setBounds(12, 54, 214, 32);
-
-        JLabel nameLabel = UITheme.makeLabel("Name");
-        nameLabel.setFont(new Font("Segoe UI", Font.PLAIN, 11));
-        nameLabel.setBounds(12, 94, 110, 14);
-
+        plateField.setFont(UITheme.FONT_BODY);
         JTextField nameField = makeField();
-        nameField.setBounds(12, 110, 214, 32);
-
-        JLabel gateLabel = UITheme.makeLabel("Entry Gate");
-        gateLabel.setFont(new Font("Segoe UI", Font.PLAIN, 11));
-        gateLabel.setBounds(12, 150, 110, 14);
-
-        JComboBox<String> gateChoice = new JComboBox<>(new String[] {
+        nameField.setFont(UITheme.FONT_BODY);
+        JComboBox<String> gateChoice = new JComboBox<>(new String[]{
             "Nearest Entrance", "Gate A", "Gate B", "Gate C"
         });
         gateChoice.setBackground(UITheme.BG_INPUT);
         gateChoice.setForeground(UITheme.TEXT_PRIMARY);
-        gateChoice.setBounds(12, 166, 214, 30);
+        gateChoice.setFont(UITheme.FONT_BODY);
+
+        gc.gridy = 0; form.add(makeFormLabel("Vehicle Plate"), gc);
+        gc.gridy = 1; gc.insets = new Insets(0, 0, 12, 0); form.add(plateField, gc);
+        gc.gridy = 2; gc.insets = new Insets(0, 0, 4, 0);  form.add(makeFormLabel("Name"), gc);
+        gc.gridy = 3; gc.insets = new Insets(0, 0, 12, 0); form.add(nameField, gc);
+        gc.gridy = 4; gc.insets = new Insets(0, 0, 4, 0);  form.add(makeFormLabel("Entry Gate"), gc);
+        gc.gridy = 5; gc.insets = new Insets(0, 0, 18, 0); form.add(gateChoice, gc);
 
         JButton submitBtn = UITheme.makeButton("Submit  →", new Color(22, 100, 50));
-        submitBtn.setFont(new Font("Segoe UI", Font.BOLD, 12));
-        submitBtn.setBounds(12, 202, 214, 28);
-        submitBtn.addActionListener(e -> submitToQueue(bubble, cl, plateField, nameField, gateChoice, number));
+        submitBtn.setFont(new Font("Segoe UI", Font.BOLD, 15));
+        gc.gridy = 6; gc.insets = new Insets(0, 0, 0, 0); form.add(submitBtn, gc);
 
+        submitBtn.addActionListener(e -> submitToQueue(bubble, cl, plateField, nameField, gateChoice, number));
         plateField.addActionListener(e -> submitToQueue(bubble, cl, plateField, nameField, gateChoice, number));
         nameField.addActionListener(e  -> submitToQueue(bubble, cl, plateField, nameField, gateChoice, number));
 
-        p.add(title); p.add(closeBtn);
-        p.add(plateLabel); p.add(plateField);
-        p.add(nameLabel);  p.add(nameField);
-        p.add(gateLabel);  p.add(gateChoice);
-        p.add(submitBtn);
+        p.add(header, BorderLayout.NORTH);
+        p.add(form,   BorderLayout.CENTER);
 
         SwingUtilities.invokeLater(plateField::requestFocusInWindow);
         return p;
+    }
+
+    private JLabel makeFormLabel(String text) {
+        JLabel l = new JLabel(text);
+        l.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        l.setForeground(UITheme.TEXT_SECONDARY);
+        return l;
     }
 
     // ── State 2: Waiting card ─────────────────────────────────────────────────
 
     private JPanel buildWaitingCard(JPanel bubble, int number, String plate, String name,
                                     String gateLabelText, JLabel[] posLabelRef, JLabel[] totalLabelRef) {
-        JPanel p = new JPanel(null);
+        JPanel p = new JPanel(new BorderLayout(0, 12));
         p.setBackground(UITheme.BG_CARD);
+        p.setBorder(new EmptyBorder(16, 18, 18, 18));
 
-        JLabel title = new JLabel("Vehicle #" + number);
-        title.setFont(UITheme.FONT_SUBTITLE);
+        // Header
+        JPanel header = new JPanel(new BorderLayout());
+        header.setOpaque(false);
+        header.setBorder(new EmptyBorder(0, 0, 4, 0));
+        JLabel title = new JLabel("Vehicle Entry");
+        title.setFont(new Font("Segoe UI", Font.BOLD, 18));
         title.setForeground(UITheme.TEXT_PRIMARY);
-        title.setBounds(12, 10, 140, 18);
-
         JButton closeBtn = makeXBtn(UITheme.BG_CARD);
-        closeBtn.setBounds(200, 2, 32, 32);
         closeBtn.addActionListener(e -> removeBubble(bubble));
+        header.add(title,    BorderLayout.WEST);
+        header.add(closeBtn, BorderLayout.EAST);
 
-        JLabel badge = UITheme.makeBadge("⏳  PENDING", UITheme.WARNING);
-        badge.setFont(new Font("Segoe UI", Font.BOLD, 10));
+        // Body
+        JPanel body = new JPanel(new GridBagLayout());
+        body.setOpaque(false);
+        GridBagConstraints gc = new GridBagConstraints();
+        gc.fill = GridBagConstraints.HORIZONTAL;
+        gc.weightx = 1.0; gc.gridx = 0;
+
+        JLabel badge = UITheme.makeBadge("PENDING", UITheme.WARNING);
+        badge.setFont(new Font("Segoe UI", Font.BOLD, 14));
         badge.setForeground(UITheme.BG_DARK);
-        badge.setBounds(12, 36, 90, 18);
+        badge.setBorder(new EmptyBorder(6, 16, 6, 16));
 
-        JLabel info = new JLabel(plate + "  ·  " + name + "  ·  " + gateLabelText);
-        info.setFont(UITheme.FONT_MONO);
-        info.setForeground(UITheme.TEXT_PRIMARY);
-        info.setBounds(12, 64, 214, 16);
+        JLabel lblPlate = new JLabel(plate);
+        lblPlate.setFont(new Font("Segoe UI", Font.BOLD, 24));
+        lblPlate.setForeground(UITheme.TEXT_PRIMARY);
+
+        JLabel lblName = new JLabel(name);
+        lblName.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        lblName.setForeground(UITheme.TEXT_SECONDARY);
+
+        JLabel lblGate = new JLabel(gateLabelText);
+        lblGate.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        lblGate.setForeground(UITheme.TEXT_SECONDARY);
 
         JSeparator sep = new JSeparator();
         sep.setForeground(UITheme.BORDER);
-        sep.setBounds(12, 88, 214, 2);
 
         JLabel posLabel = new JLabel("Checking queue...");
-        posLabel.setFont(new Font("Segoe UI", Font.BOLD, 13));
+        posLabel.setFont(new Font("Segoe UI", Font.BOLD, 15));
         posLabel.setForeground(UITheme.ACCENT);
-        posLabel.setBounds(12, 98, 214, 18);
 
-        JLabel totalLabel = UITheme.makeLabel("");
-        totalLabel.setFont(new Font("Segoe UI", Font.PLAIN, 11));
-        totalLabel.setBounds(12, 118, 214, 14);
+        JLabel totalLabel = new JLabel("");
+        totalLabel.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        totalLabel.setForeground(UITheme.SUCCESS);
 
-        JLabel waitMsg = UITheme.makeLabel("Waiting for admin to approve...");
-        waitMsg.setFont(new Font("Segoe UI", Font.PLAIN, 11));
+        JLabel waitMsg = new JLabel("Waiting for admin to approve...");
+        waitMsg.setFont(new Font("Segoe UI", Font.ITALIC, 13));
         waitMsg.setForeground(UITheme.TEXT_MUTED);
-        waitMsg.setBounds(12, 160, 214, 14);
+
+        GridBagConstraints badgeGc = new GridBagConstraints();
+        badgeGc.gridx = 0; badgeGc.gridy = 0;
+        badgeGc.anchor = GridBagConstraints.WEST;
+        badgeGc.fill = GridBagConstraints.NONE;
+        badgeGc.insets = new Insets(0, 0, 10, 0);
+        body.add(badge, badgeGc);
+        gc.gridy = 1; gc.insets = new Insets(0, 0, 2, 0);  body.add(lblPlate, gc);
+        gc.gridy = 2; gc.insets = new Insets(0, 0, 2, 0);  body.add(lblName, gc);
+        gc.gridy = 3; gc.insets = new Insets(0, 0, 10, 0); body.add(lblGate, gc);
+        gc.gridy = 4; gc.insets = new Insets(0, 0, 10, 0); body.add(sep, gc);
+        gc.gridy = 5; gc.insets = new Insets(0, 0, 4, 0);  body.add(posLabel, gc);
+        gc.gridy = 6; gc.insets = new Insets(0, 0, 12, 0); body.add(totalLabel, gc);
+        gc.gridy = 7; gc.insets = new Insets(0, 0, 0, 0);  body.add(waitMsg, gc);
 
         posLabelRef[0]   = posLabel;
         totalLabelRef[0] = totalLabel;
 
-        p.add(title); p.add(closeBtn); p.add(badge);
-        p.add(info);  p.add(sep);
-        p.add(posLabel); p.add(totalLabel); p.add(waitMsg);
+        p.add(header, BorderLayout.NORTH);
+        p.add(body,   BorderLayout.CENTER);
         return p;
     }
 
     // ── State 3: Assigned card ────────────────────────────────────────────────
 
     private JPanel buildAssignedCard(JPanel bubble, int number,
-                                     String plate, String name, String slot) {
-        JPanel p = new JPanel(null);
-        p.setBackground(new Color(18, 46, 26));
+                                     String plate, String name, String slot, String gate) {
+        Color bg     = new Color(18, 46, 26);
+        Color green  = new Color(100, 220, 130);
+        Color dimGreen = new Color(60, 140, 80);
 
-        JLabel title = new JLabel("Vehicle #" + number);
-        title.setFont(UITheme.FONT_SUBTITLE);
-        title.setForeground(new Color(150, 220, 160));
-        title.setBounds(12, 10, 140, 18);
+        JPanel p = new JPanel(new BorderLayout(0, 12));
+        p.setBackground(bg);
+        p.setBorder(new EmptyBorder(16, 18, 18, 18));
 
-        JButton closeBtn = makeXBtn(new Color(18, 46, 26));
-        closeBtn.setForeground(new Color(100, 180, 110));
-        closeBtn.setBounds(200, 2, 32, 32);
+        // Header
+        JPanel header = new JPanel(new BorderLayout());
+        header.setOpaque(false);
+        header.setBorder(new EmptyBorder(0, 0, 4, 0));
+        JLabel title = new JLabel("Vehicle Entry");
+        title.setFont(new Font("Segoe UI", Font.BOLD, 18));
+        title.setForeground(green);
+        JButton closeBtn = makeXBtn(bg);
+        closeBtn.setForeground(green);
         closeBtn.addActionListener(e -> removeBubble(bubble));
+        header.add(title,    BorderLayout.WEST);
+        header.add(closeBtn, BorderLayout.EAST);
 
-        JLabel badge = UITheme.makeBadge("✓  APPROVED", UITheme.SUCCESS);
-        badge.setFont(new Font("Segoe UI", Font.BOLD, 10));
-        badge.setBounds(12, 36, 90, 18);
+        // Body
+        JPanel body = new JPanel(new GridBagLayout());
+        body.setOpaque(false);
+        GridBagConstraints gc = new GridBagConstraints();
+        gc.fill = GridBagConstraints.HORIZONTAL;
+        gc.weightx = 1.0; gc.gridx = 0;
+
+        JLabel badge = UITheme.makeBadge("APPROVED", UITheme.SUCCESS);
+        badge.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        badge.setBorder(new EmptyBorder(6, 16, 6, 16));
 
         JLabel slotLabel = new JLabel("Slot  " + slot);
-        slotLabel.setFont(new Font("Segoe UI", Font.BOLD, 22));
+        slotLabel.setFont(new Font("Segoe UI", Font.BOLD, 32));
         slotLabel.setForeground(UITheme.SUCCESS);
-        slotLabel.setBounds(12, 62, 214, 30);
 
         JSeparator sep = new JSeparator();
-        sep.setForeground(new Color(34, 80, 46));
-        sep.setBounds(12, 100, 214, 2);
+        sep.setForeground(dimGreen);
 
-        JLabel plateRow = makeInfoLabel("Plate:", plate);
-        plateRow.setBounds(12, 110, 214, 16);
+        JLabel plateRow = makeInfoLabel("Car Plate:", plate, green);
+        JLabel nameRow  = makeInfoLabel("Driver Name:", name, green);
+        JLabel gateRow  = makeInfoLabel("Entry Gate:", gate, green);
 
-        JLabel nameRow = makeInfoLabel("Name:", name);
-        nameRow.setBounds(12, 130, 214, 16);
+        GridBagConstraints badgeGc = new GridBagConstraints();
+        badgeGc.gridx = 0; badgeGc.gridy = 0;
+        badgeGc.anchor = GridBagConstraints.WEST;
+        badgeGc.fill = GridBagConstraints.NONE;
+        badgeGc.insets = new Insets(0, 0, 10, 0);
+        body.add(badge, badgeGc);
 
-        JLabel note = new JLabel("Admin approved — O(1) dequeue");
-        note.setFont(new Font("Segoe UI", Font.PLAIN, 10));
-        note.setForeground(new Color(80, 180, 100));
-        note.setBounds(12, 162, 214, 14);
+        gc.gridy = 1; gc.insets = new Insets(0, 0, 8, 0);  body.add(slotLabel, gc);
+        gc.gridy = 2; gc.insets = new Insets(0, 0, 12, 0); body.add(sep, gc);
+        gc.gridy = 3; gc.insets = new Insets(0, 0, 4, 0);  body.add(plateRow, gc);
+        gc.gridy = 4; gc.insets = new Insets(0, 0, 4, 0);  body.add(nameRow, gc);
+        gc.gridy = 5; gc.insets = new Insets(0, 0, 0, 0);  body.add(gateRow, gc);
 
-        p.add(title); p.add(closeBtn); p.add(badge);
-        p.add(slotLabel); p.add(sep);
-        p.add(plateRow); p.add(nameRow); p.add(note);
+        p.add(header, BorderLayout.NORTH);
+        p.add(body,   BorderLayout.CENTER);
         return p;
     }
 
@@ -282,9 +360,27 @@ public class UserPanel extends JPanel {
         final String name = vehicle.getOwnerName();
         final String preferredGateId = vehicle.getPreferredGateId();
 
+        // If the vehicle already has a slot assigned (e.g. from Management), show assigned card directly
+        if (vehicle.getAssignedSlotId() != null) {
+            CardLayout cl = new CardLayout();
+            JPanel bubble = new JPanel(cl);
+            bubble.setPreferredSize(new Dimension(270, 320));
+            bubble.setBackground(UITheme.BG_CARD);
+            bubble.setBorder(BorderFactory.createLineBorder(UITheme.SUCCESS, 1));
+            JPanel assignedCard = buildAssignedCard(bubble, number, plate, name, vehicle.getAssignedSlotId(), prettyGateLabel(vehicle.getPreferredGateId()));
+            bubble.add(assignedCard, "ASSIGNED");
+            cl.show(bubble, "ASSIGNED");
+            bubbleVehicles.put(bubble, vehicle);
+            bubbleSlots.put(bubble, vehicle.getAssignedSlotId());
+            bubbleContainer.add(bubble);
+            bubbleContainer.revalidate();
+            bubbleContainer.repaint();
+            return;
+        }
+
         CardLayout cl = new CardLayout();
         JPanel bubble = new JPanel(cl);
-        bubble.setPreferredSize(new Dimension(240, 235));
+        bubble.setPreferredSize(new Dimension(270, 320));
         bubble.setBackground(UITheme.BG_CARD);
         bubble.setBorder(BorderFactory.createLineBorder(UITheme.BORDER, 1));
 
@@ -319,7 +415,23 @@ public class UserPanel extends JPanel {
             }
 
             if (currentState[0] == 1) {
-                if (!inQueue) {
+                // Check if management already assigned a slot directly
+                Vehicle latest = records == null ? null : records.findVehicleByPlate(plate);
+                String managedSlot = (latest != null) ? latest.getAssignedSlotId() : null;
+
+                if (managedSlot != null) {
+                    currentState[0] = 2;
+                    slotRef[0] = managedSlot;
+                    bubbleSlots.put(bubble, managedSlot);
+                    assignedCardRef[0] = buildAssignedCard(bubble, number, plate, name, managedSlot, prettyGateLabel(preferredGateId));
+                    bubble.add(assignedCardRef[0], "ASSIGNED");
+                    bubble.setBorder(BorderFactory.createLineBorder(UITheme.SUCCESS, 1));
+                    cl.show(bubble, "ASSIGNED");
+                    bubble.revalidate();
+                    bubble.repaint();
+                    log.log("USER  Auto-approved: " + plate + " → " + managedSlot + " (assigned by management)");
+                    setStatus("Slot " + managedSlot + " assigned to " + plate + " by management.", UITheme.SUCCESS);
+                } else if (!inQueue) {
                     if (gate.wasApproved(plate)) {
                         String slot = assignNearestSlot(vehicle);
                         if (slot == null) {
@@ -331,7 +443,7 @@ public class UserPanel extends JPanel {
                         slotRef[0] = slot;
                         bubbleSlots.put(bubble, slot);
 
-                        assignedCardRef[0] = buildAssignedCard(bubble, number, plate, name, slot);
+                        assignedCardRef[0] = buildAssignedCard(bubble, number, plate, name, slot, prettyGateLabel(preferredGateId));
                         bubble.add(assignedCardRef[0], "ASSIGNED");
                         bubble.setBorder(BorderFactory.createLineBorder(UITheme.SUCCESS, 1));
                         cl.show(bubble, "ASSIGNED");
@@ -352,7 +464,20 @@ public class UserPanel extends JPanel {
                 }
 
             } else if (currentState[0] == 2) {
-                if (inQueue) {
+                // Detect slot reassignment by management
+                Vehicle latestForSlot = records == null ? null : records.findVehicleByPlate(plate);
+                String newSlot = (latestForSlot != null) ? latestForSlot.getAssignedSlotId() : null;
+                if (newSlot != null && !newSlot.equals(slotRef[0])) {
+                    slotRef[0] = newSlot;
+                    bubbleSlots.put(bubble, newSlot);
+                    if (assignedCardRef[0] != null) bubble.remove(assignedCardRef[0]);
+                    assignedCardRef[0] = buildAssignedCard(bubble, number, plate, name, newSlot, prettyGateLabel(preferredGateId));
+                    bubble.add(assignedCardRef[0], "ASSIGNED");
+                    cl.show(bubble, "ASSIGNED");
+                    bubble.revalidate();
+                    bubble.repaint();
+                    setStatus("Slot reassigned to " + newSlot + " for " + plate + " by management.", UITheme.SUCCESS);
+                } else if (inQueue) {
                     currentState[0] = 1;
                     if (slotRef[0] != null) {
                         releaseAssignedSlot(vehicle);
@@ -396,6 +521,10 @@ public class UserPanel extends JPanel {
         Vehicle v = new Vehicle(plate, name, System.currentTimeMillis());
         v.setPreferredGateId(preferredGateId);
         gate.vehicleArrives(v);
+        // Register in records immediately so Slot Priority and Management can find and assign it
+        if (records != null && records.findVehicleByPlate(plate) == null) {
+            records.addVehicleRecord(v);
+        }
         bubbleVehicles.put(bubble, v);
         log.log("USER  Joined queue: " + plate + " (" + name + ") via " + prettyGateLabel(preferredGateId));
 
@@ -426,7 +555,23 @@ public class UserPanel extends JPanel {
 
             if (currentState[0] == 1) {
                 // ── WAITING ───────────────────────────────────────────────
-                if (!inQueue) {
+                // Check if management assigned a slot directly
+                Vehicle latestV = records == null ? null : records.findVehicleByPlate(plate);
+                String managedSlot2 = (latestV != null) ? latestV.getAssignedSlotId() : null;
+
+                if (managedSlot2 != null) {
+                    currentState[0] = 2;
+                    slotRef[0] = managedSlot2;
+                    bubbleSlots.put(bubble, managedSlot2);
+                    assignedCardRef[0] = buildAssignedCard(bubble, number, plate, name, managedSlot2, prettyGateLabel(preferredGateId));
+                    bubble.add(assignedCardRef[0], "ASSIGNED");
+                    bubble.setBorder(BorderFactory.createLineBorder(UITheme.SUCCESS, 1));
+                    cl.show(bubble, "ASSIGNED");
+                    bubble.revalidate();
+                    bubble.repaint();
+                    log.log("USER  Auto-approved: " + plate + " → " + managedSlot2 + " (assigned by management)");
+                    setStatus("Slot " + managedSlot2 + " assigned to " + plate + " by management.", UITheme.SUCCESS);
+                } else if (!inQueue) {
                     if (gate.wasApproved(plate)) {
                         // Admin approved → pick the nearest available slot from the chosen access point.
                         String slot = assignNearestSlot(v);
@@ -442,7 +587,7 @@ public class UserPanel extends JPanel {
                             records.addVehicleRecord(v);
                         }
 
-                        assignedCardRef[0] = buildAssignedCard(bubble, number, plate, name, slot);
+                        assignedCardRef[0] = buildAssignedCard(bubble, number, plate, name, slot, prettyGateLabel(preferredGateId));
                         bubble.add(assignedCardRef[0], "ASSIGNED");
                         bubble.setBorder(BorderFactory.createLineBorder(UITheme.SUCCESS, 1));
                         cl.show(bubble, "ASSIGNED");
@@ -465,8 +610,20 @@ public class UserPanel extends JPanel {
                 }
 
             } else if (currentState[0] == 2) {
-                // ── ASSIGNED — watch for admin undo ───────────────────────
-                if (inQueue) {
+                // ── ASSIGNED — watch for management slot reassignment ─────
+                Vehicle latestV2 = records == null ? null : records.findVehicleByPlate(plate);
+                String newSlot2 = (latestV2 != null) ? latestV2.getAssignedSlotId() : null;
+                if (newSlot2 != null && !newSlot2.equals(slotRef[0])) {
+                    slotRef[0] = newSlot2;
+                    bubbleSlots.put(bubble, newSlot2);
+                    if (assignedCardRef[0] != null) bubble.remove(assignedCardRef[0]);
+                    assignedCardRef[0] = buildAssignedCard(bubble, number, plate, name, newSlot2, prettyGateLabel(preferredGateId));
+                    bubble.add(assignedCardRef[0], "ASSIGNED");
+                    cl.show(bubble, "ASSIGNED");
+                    bubble.revalidate();
+                    bubble.repaint();
+                    setStatus("Slot reassigned to " + newSlot2 + " for " + plate + " by management.", UITheme.SUCCESS);
+                } else if (inQueue) {
                     // Vehicle returned to queue → undo of approval, free the slot
                     currentState[0] = 1;
                     if (slotRef[0] != null) {
@@ -726,6 +883,15 @@ public class UserPanel extends JPanel {
         JLabel l = new JLabel("<html><span style='color:#8b949e'>" + key +
                               "&nbsp;</span><span style='color:#e6edf3'>" + value + "</span></html>");
         l.setFont(UITheme.FONT_BODY);
+        return l;
+    }
+
+    private JLabel makeInfoLabel(String key, String value, Color valueColor) {
+        String hex = String.format("#%02x%02x%02x",
+                valueColor.getRed(), valueColor.getGreen(), valueColor.getBlue());
+        JLabel l = new JLabel("<html><span style='color:#8b949e'>" + key +
+                              "&nbsp;</span><span style='color:" + hex + "'><b>" + value + "</b></span></html>");
+        l.setFont(new Font("Segoe UI", Font.PLAIN, 15));
         return l;
     }
 }

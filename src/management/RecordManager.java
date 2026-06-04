@@ -98,4 +98,9 @@ public class RecordManager {
 
     public int getVehicleCount()     { return vehicleRecords.getSize(); }
     public int getParkingSlotCount() { return parkingSlotRecords.getSize(); }
+
+    public void clearAll() {
+        vehicleRecords     = new RecordLinkedList<>();
+        parkingSlotRecords = new RecordLinkedList<>();
+    }
 }
