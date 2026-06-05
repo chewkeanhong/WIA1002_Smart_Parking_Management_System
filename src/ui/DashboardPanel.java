@@ -1,5 +1,6 @@
 package ui;
 
+import management.RecordManager;
 import models.ParkingMap;
 
 import javax.swing.*;
@@ -8,14 +9,19 @@ import java.awt.*;
 
 public class DashboardPanel extends JPanel {
 
-    private JLabel statVehicles, statSlots, statUtil, statSearches;
+    private JLabel statVehicles, statSlots;
+    private Runnable onResetCallback;
 
+    public void setOnResetCallback(Runnable r) { this.onResetCallback = r; }
+
+    private final RecordManager recordManager;
     private final ParkingMap  parkingMap;
     private JPanel[]          slotCells;
     private JLabel[]          slotLabels;
     private JLabel            freeCountLabel, occupiedCountLabel;
 
-    public DashboardPanel(ActivityLog log, ParkingMap parkingMap) {
+    public DashboardPanel(ActivityLog log, RecordManager recordManager, ParkingMap parkingMap) {
+        this.recordManager = recordManager;
         this.parkingMap = parkingMap;
         setBackground(UITheme.BG_DARK);
         setLayout(new BorderLayout(0, 16));
@@ -24,10 +30,14 @@ public class DashboardPanel extends JPanel {
         add(buildHeader(),  BorderLayout.NORTH);
         add(buildContent(), BorderLayout.CENTER);
 
-        new Timer(1000, e -> refreshMap()).start();
+        new Timer(1000, e -> refreshAll()).start();
     }
 
-    // ── Header ────────────────────────────────────────────────────────────────
+    public DashboardPanel(ActivityLog log, ParkingMap parkingMap) {
+        this(log, null, parkingMap);
+    }
+
+    // Header
     private JPanel buildHeader() {
         JPanel p = new JPanel(new BorderLayout());
         p.setOpaque(false);
@@ -45,35 +55,45 @@ public class DashboardPanel extends JPanel {
         left.add(title);
         left.add(sub);
 
-        p.add(left, BorderLayout.WEST);
-        p.add(UITheme.makeBadge("● SYSTEM ONLINE", UITheme.SUCCESS), BorderLayout.EAST);
+        JButton resetBtn = UITheme.makeButton("Reset System", UITheme.DANGER);
+        resetBtn.addActionListener(e -> {
+            if (showResetConfirm()) {
+                if (onResetCallback != null) onResetCallback.run();
+            }
+        });
+
+        p.add(left,     BorderLayout.WEST);
+        p.add(resetBtn, BorderLayout.EAST);
         return p;
     }
 
-    // ── Main content ──────────────────────────────────────────────────────────
+    // Main content
     private JPanel buildContent() {
-        JPanel p = new JPanel(new BorderLayout(0, 14));
+        statVehicles = valueLabel("0", UITheme.ACCENT);
+        statSlots    = valueLabel("0", UITheme.SUCCESS);
+
+        JPanel p = new JPanel(new GridBagLayout());
         p.setOpaque(false);
-        p.add(buildStatRow(),   BorderLayout.NORTH);
-        p.add(buildMiddleRow(), BorderLayout.CENTER);
+        GridBagConstraints g = new GridBagConstraints();
+        g.fill = GridBagConstraints.BOTH;
+
+        // Row 0 — stat cards (natural height, not stretched vertically)
+        g.gridy = 0; g.weighty = 0;
+        g.gridx = 0; g.weightx = 0.62; g.insets = new Insets(0, 0, 14, 0);
+        p.add(statCard("Active Vehicles", statVehicles, "Linked List (O1 add)"), g);
+
+        g.gridx = 1; g.weightx = 0.38; g.insets = new Insets(0, 14, 14, 0);
+        p.add(statCard("Available Slots", statSlots, "Min Heap (Olog n)"), g);
+
+        // Row 1 — main panels (stretch to fill remaining height)
+        g.gridy = 1; g.weighty = 1.0;
+        g.gridx = 0; g.weightx = 0.62; g.insets = new Insets(0, 0, 0, 0);
+        p.add(buildParkingMapCard(), g);
+
+        g.gridx = 1; g.weightx = 0.38; g.insets = new Insets(0, 14, 0, 0);
+        p.add(buildModulesCard(), g);
+
         return p;
-    }
-
-    // ── Stat cards ────────────────────────────────────────────────────────────
-    private JPanel buildStatRow() {
-        JPanel row = new JPanel(new GridLayout(1, 4, 14, 0));
-        row.setOpaque(false);
-
-        statVehicles = valueLabel("0",   UITheme.ACCENT);
-        statSlots    = valueLabel("0",   UITheme.SUCCESS);
-        statUtil     = valueLabel("0 %", UITheme.WARNING);
-        statSearches = valueLabel("0",   UITheme.INFO);
-
-        row.add(statCard("Active Vehicles",  statVehicles, "↑ Linked List (O1 add)"));
-        row.add(statCard("Available Slots",  statSlots,    "★ Min Heap (Olog n)"));
-        row.add(statCard("Lot Utilization",  statUtil,     "⇌ Graph / Dijkstra"));
-        row.add(statCard("Index Entries",    statSearches, "⌕ AVL Tree  |  ⚡ HashMap"));
-        return row;
     }
 
     private JPanel statCard(String label, JLabel valLabel, String ds) {
@@ -97,29 +117,12 @@ public class DashboardPanel extends JPanel {
         return l;
     }
 
-    // ── Middle: parking map (62%) + modules (38%) ────────────────────────────
-    private JPanel buildMiddleRow() {
-        JPanel row = new JPanel(new GridBagLayout());
-        row.setOpaque(false);
-        GridBagConstraints g = new GridBagConstraints();
-        g.fill = GridBagConstraints.BOTH;
-        g.weighty = 1.0;
-        g.gridy = 0;
 
-        g.gridx = 0; g.weightx = 0.62;
-        row.add(buildParkingMapCard(), g);
-
-        g.gridx = 1; g.weightx = 0.38;
-        g.insets = new Insets(0, 14, 0, 0);
-        row.add(buildModulesCard(), g);
-        return row;
-    }
-
-    // ── Live Parking Map card ─────────────────────────────────────────────────
+    // Live Parking Map card
     private JPanel buildParkingMapCard() {
         JPanel card = UITheme.makeCard(new BorderLayout(0, 10));
 
-        // ── title row + legend
+        // title row + legend
         JPanel titleRow = new JPanel(new BorderLayout());
         titleRow.setOpaque(false);
         titleRow.add(UITheme.makeSectionTitle("Live Parking Map"), BorderLayout.WEST);
@@ -130,7 +133,7 @@ public class DashboardPanel extends JPanel {
         titleRow.add(legend, BorderLayout.EAST);
         card.add(titleRow, BorderLayout.NORTH);
 
-        // ── Build all slot cells (two 2×10 blocks = 40)
+        // Build all slot cells (two 2×10 blocks = 40)
         int total = ParkingMap.total();
         slotCells  = new JPanel[total];
         slotLabels = new JLabel[total];
@@ -146,7 +149,7 @@ public class DashboardPanel extends JPanel {
             slotLabels[i] = lbl;
         }
 
-        // ── Two 2×10 blocks separated by a central driving aisle
+        // Two 2×10 blocks separated by a central driving aisle
         int cellH       = 58;
         int laneH       = 26;          // horizontal road thickness (top / middle / bottom)
         int laneW       = 36;          // vertical road thickness (left / right)
@@ -171,7 +174,7 @@ public class DashboardPanel extends JPanel {
         slotsPanel.add(Box.createVerticalStrut(innerGap));
         slotsPanel.add(makeSlotRow(30, 40, cellH));
 
-        // ── Roads frame the slot grid on all four sides; gates sit on the side / top roads
+        // Roads frame the slot grid on all four sides; gates sit on the side / top roads
         JPanel lot = new JPanel(new BorderLayout());
         lot.setOpaque(false);
         lot.setAlignmentX(Component.LEFT_ALIGNMENT);
@@ -204,11 +207,11 @@ public class DashboardPanel extends JPanel {
         lot.add(makeSideGate("Gate B", laneW, labelStripW, gateGap, true),     BorderLayout.EAST);
         lot.add(slotsPanel,                                                    BorderLayout.CENTER);
 
-        // ── Entrance / Exit driveway directly below the framed lot
+        // Entrance / Exit driveway directly below the framed lot
         JPanel driveBar = buildDriveBar();
         driveBar.setAlignmentX(Component.LEFT_ALIGNMENT);
 
-        // ── BoxLayout Y_AXIS with vertical glue centres content, fills width
+        // BoxLayout Y_AXIS with vertical glue centres content, fills width
         JPanel centerWrapper = new JPanel();
         centerWrapper.setOpaque(false);
         centerWrapper.setLayout(new BoxLayout(centerWrapper, BoxLayout.Y_AXIS));
@@ -218,7 +221,7 @@ public class DashboardPanel extends JPanel {
         centerWrapper.add(Box.createVerticalGlue());
         card.add(centerWrapper, BorderLayout.CENTER);
 
-        // ── Stats bar
+        // Stats bar
         freeCountLabel     = UITheme.makeLabel("Free: " + ParkingMap.total());
         freeCountLabel.setForeground(UITheme.SUCCESS);
         occupiedCountLabel = UITheme.makeLabel("Occupied: 0");
@@ -311,7 +314,7 @@ public class DashboardPanel extends JPanel {
         return lane;
     }
 
-    // ── Corner pieces (asphalt fill where side road meets top/bottom road) ───
+    // Corner pieces (asphalt fill where side road meets top/bottom road)
     /** NORTH-row corner: asphalt fills a laneW × laneH block at the inner edge, aligned with the road. */
     private JPanel makeNorthCorner(int totalW, int totalH, int asphaltW, boolean asphaltOnRight, int topOffset) {
         JPanel p = new JPanel() {
@@ -348,7 +351,7 @@ public class DashboardPanel extends JPanel {
         return p;
     }
 
-    // ── Gate-label strip + composite "gate side" ─────────────────────────────
+    // Gate-label strip + composite "gate side"
     private JPanel makeLabelStrip(String gateText, int width, int height, boolean horizontalText) {
         JPanel strip = new JPanel(new GridBagLayout());
         strip.setBackground(UITheme.BG_CARD);
@@ -460,7 +463,59 @@ public class DashboardPanel extends JPanel {
         occupiedCountLabel.setText("Occupied: " + parkingMap.getOccupiedCount());
     }
 
-    // ── System Modules card ───────────────────────────────────────────────────
+    private void refreshStats() {
+        if (recordManager == null) return;
+
+        int vehicles = recordManager.getVehicleCount();
+        int totalSlots = recordManager.getParkingSlotCount();
+        int availableSlots = parkingMap == null ? 0 : parkingMap.getFreeCount();
+        statVehicles.setText(String.valueOf(vehicles));
+        statSlots.setText(String.valueOf(availableSlots));
+    }
+
+    private boolean showResetConfirm() {
+        JDialog dialog = new JDialog(SwingUtilities.getWindowAncestor(this), "Reset System",
+                java.awt.Dialog.ModalityType.APPLICATION_MODAL);
+        dialog.setUndecorated(true);
+        dialog.getRootPane().setBorder(BorderFactory.createLineBorder(UITheme.BORDER_LIGHT, 1));
+
+        JPanel root = new JPanel(new BorderLayout(0, 20));
+        root.setBackground(UITheme.BG_CARD);
+        root.setBorder(new EmptyBorder(28, 32, 24, 32));
+
+        JLabel msg = new JLabel("Reset all panels and data to default?");
+        msg.setFont(UITheme.FONT_SUBTITLE);
+        msg.setForeground(UITheme.TEXT_PRIMARY);
+        msg.setHorizontalAlignment(SwingConstants.CENTER);
+        root.add(msg, BorderLayout.CENTER);
+
+        boolean[] confirmed = {false};
+
+        JButton yes = UITheme.makeButton("Yes, Reset", UITheme.DANGER);
+        JButton no  = UITheme.makeButton("Cancel",     UITheme.BG_INPUT);
+        no.setForeground(UITheme.TEXT_SECONDARY);
+        yes.addActionListener(ev -> { confirmed[0] = true;  dialog.dispose(); });
+        no .addActionListener(ev -> dialog.dispose());
+
+        JPanel btns = new JPanel(new FlowLayout(FlowLayout.CENTER, 12, 0));
+        btns.setOpaque(false);
+        btns.add(no);
+        btns.add(yes);
+        root.add(btns, BorderLayout.SOUTH);
+
+        dialog.setContentPane(root);
+        dialog.pack();
+        dialog.setLocationRelativeTo(this);
+        dialog.setVisible(true);
+        return confirmed[0];
+    }
+
+    private void refreshAll() {
+        refreshStats();
+        refreshMap();
+    }
+
+    // System Modules card
     private JPanel buildModulesCard() {
         JPanel card = UITheme.makeCard(new BorderLayout(0, 12));
         JLabel title = UITheme.makeSectionTitle("System Modules");
@@ -528,8 +583,5 @@ public class DashboardPanel extends JPanel {
     public void refresh(int vehicles, int slotsAvail, int totalSlots, int indexEntries) {
         statVehicles.setText(String.valueOf(vehicles));
         statSlots.setText(String.valueOf(slotsAvail));
-        int pct = totalSlots == 0 ? 0 : (vehicles * 100 / Math.max(totalSlots, 1));
-        statUtil.setText(pct + " %");
-        statSearches.setText(String.valueOf(indexEntries));
     }
 }

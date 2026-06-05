@@ -82,8 +82,7 @@ public class UserFrame extends JFrame {
         return p;
     }
 
-    // ── Enqueue form ─────────────────────────────────────────────────────────
-
+    // Enqueue form
     private JPanel buildEnqueueCard() {
         JPanel card = UITheme.makeCard(new BorderLayout(0, 16));
 
@@ -139,8 +138,7 @@ public class UserFrame extends JFrame {
         form.add(field, gc);
     }
 
-    // ── Queue display ─────────────────────────────────────────────────────────
-
+    // Queue display
     private JPanel buildQueueCard() {
         JPanel card = UITheme.makeCard(new BorderLayout(0, 10));
 
@@ -168,8 +166,7 @@ public class UserFrame extends JFrame {
         return card;
     }
 
-    // ── Actions ───────────────────────────────────────────────────────────────
-
+    // Actions
     private void enqueue() {
         String plate = tfPlate.getText().trim().toUpperCase();
         String owner = tfOwner.getText().trim();

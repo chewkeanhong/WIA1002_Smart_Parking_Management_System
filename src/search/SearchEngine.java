@@ -3,7 +3,7 @@ package search;
 import models.Vehicle;
 import java.util.List;
 
-/** Facade over VehicleBST for the search module. */
+// Just a friendlier front door to the VehicleBST for the search panel.
 public class SearchEngine {
 
     private final VehicleBST bst = new VehicleBST();

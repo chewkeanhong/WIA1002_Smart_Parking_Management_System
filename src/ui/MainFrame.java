@@ -10,7 +10,7 @@ import java.awt.*;
 
 public class MainFrame extends JFrame {
 
-    // ── Nav entries: [display text, card key, icon] ───────────────────────────
+    // Nav entries: [display text, card key, icon]
     private static final String[][] NAV = {
         { "Dashboard",    "Dashboard",    "🏠" },
         { "Entry / Exit", "Entry / Exit", "🚗" },
@@ -18,6 +18,8 @@ public class MainFrame extends JFrame {
         { "Search",       "Search",       "🔍" },
         { "Routes",       "Routes",       "🗺️" },
         { "Logs",         "Logs",         "📋" },
+        { "Management",   "Management",   "🧾" },
+        { "Retrieval",    "Retrieval",    "⚡" },
         { "User",         "User",         "👤" },
     };
 
@@ -37,6 +39,7 @@ public class MainFrame extends JFrame {
     private NavigationPanel  navigationPanel;
     private SearchPanel      searchPanel;
     private LogsPanel        logsPanel;
+    private RetrievalPanel   retrievalPanel;
     private UserPanel        userPanel;
 
 
@@ -55,9 +58,8 @@ public class MainFrame extends JFrame {
         this.contentArea = new JPanel(cardLayout);
         this.navBtns = new JButton[NAV.length];
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        setSize(1320, 860);
         setMinimumSize(new Dimension(1060, 680));
-        setLocationRelativeTo(null);
+        setExtendedState(JFrame.MAXIMIZED_BOTH);
         getContentPane().setBackground(UITheme.BG_DARK);
 
         buildUI();
@@ -65,7 +67,7 @@ public class MainFrame extends JFrame {
         setVisible(true);
     }
 
-    // ── Layout assembly ───────────────────────────────────────────────────────
+    // Layout assembly
     private void buildUI() {
         setLayout(new BorderLayout());
         add(buildSidebar(),  BorderLayout.WEST);
@@ -75,14 +77,21 @@ public class MainFrame extends JFrame {
     private JPanel buildContent() {
         contentArea.setBackground(UITheme.BG_DARK);
 
-        dashboardPanel   = new DashboardPanel(log, parkingMap);
+        dashboardPanel   = new DashboardPanel(log, records, parkingMap);
         gateControlPanel = new GateControlPanel(log, gate);
-        assignmentPanel  = new AssignmentPanel(log, records, parkingMap);
+        assignmentPanel  = new AssignmentPanel(log, records, parkingMap, gate);
         searchPanel      = new SearchPanel(log, records);
         navigationPanel  = new NavigationPanel(log, records, parkingMap);
         logsPanel        = new LogsPanel(log);
-        managementPanel  = new ManagementPanel(log, dashboardPanel, records);
+        retrievalPanel   = new RetrievalPanel(log, records);
         userPanel        = new UserPanel(log, gate, parkingMap, records);
+        managementPanel  = new ManagementPanel(log, dashboardPanel, records, gate, userPanel, parkingMap);
+
+        dashboardPanel.setOnResetCallback(this::resetSystem);
+        assignmentPanel.setUserPanel(userPanel);
+        assignmentPanel.setRetrievalPanel(retrievalPanel);
+        managementPanel.setRetrievalPanel(retrievalPanel);
+        retrievalPanel.setParkingMap(parkingMap);
 
         contentArea.add(dashboardPanel,   "Dashboard");
         contentArea.add(gateControlPanel, "Entry / Exit");
@@ -90,13 +99,14 @@ public class MainFrame extends JFrame {
         contentArea.add(searchPanel,      "Search");
         contentArea.add(navigationPanel,  "Routes");
         contentArea.add(logsPanel,        "Logs");
-        contentArea.add(userPanel,        "User");
         contentArea.add(managementPanel,  "Management");
+        contentArea.add(retrievalPanel,   "Retrieval");
+        contentArea.add(userPanel,        "User");
 
         return contentArea;
     }
 
-    // ── Sidebar ───────────────────────────────────────────────────────────────
+    // Sidebar
     private JPanel buildSidebar() {
         JPanel sidebar = new JPanel(new BorderLayout());
         sidebar.setBackground(UITheme.BG_SIDEBAR);
@@ -191,8 +201,22 @@ public class MainFrame extends JFrame {
     }
 
 
-    // ── Navigation ────────────────────────────────────────────────────────────
+    // System reset
+    private void resetSystem() {
+        records.clearAll();
+        parkingMap.clearOccupancy();
+        gate.clearAll();
+        contentArea.removeAll();
+        buildContent();
+        contentArea.revalidate();
+        contentArea.repaint();
+        showPanel(0);
+    }
+
+    // Navigation
     private void showPanel(int idx) {
+        // Keep whatever the user typed / built on Slot Priority when navigating away;
+        // the panel persists in the CardLayout and is only cleared via the Reset All button.
         for (int i = 0; i < navBtns.length; i++) {
             boolean active = (i == idx);
             navBtns[i].setBackground(active ? UITheme.ACCENT      : UITheme.BG_SIDEBAR);
