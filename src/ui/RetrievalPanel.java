@@ -94,8 +94,13 @@ public class RetrievalPanel extends JPanel {
 
     // ── Left: cache forms + lookup ────────────────────────────────────────────
     private JPanel buildLeftColumn() {
-        JPanel col = new JPanel(new BorderLayout(0, 10));
+        // GridBagLayout with equal vertical weights keeps all three cards visible
+        // and shrinks them proportionally — a BorderLayout would collapse the middle one.
+        JPanel col = new JPanel(new GridBagLayout());
         col.setOpaque(false);
+        GridBagConstraints cgc = new GridBagConstraints();
+        cgc.fill = GridBagConstraints.BOTH;
+        cgc.gridx = 0; cgc.weightx = 1.0; cgc.weighty = 1.0;
 
         // Cache vehicle
         JPanel vCard = UITheme.makeCard(new BorderLayout(0, 8));
@@ -116,7 +121,7 @@ public class RetrievalPanel extends JPanel {
 
         vCard.add(vForm,  BorderLayout.CENTER);
         vCard.add(vBtns,  BorderLayout.SOUTH);
-        col.add(vCard, BorderLayout.NORTH);
+        cgc.gridy = 0; cgc.insets = new Insets(0, 0, 5, 0); col.add(vCard, cgc);
 
         // Cache slot
         JPanel sCard = UITheme.makeCard(new BorderLayout(0, 8));
@@ -137,7 +142,7 @@ public class RetrievalPanel extends JPanel {
 
         sCard.add(sForm,  BorderLayout.CENTER);
         sCard.add(sBtns,  BorderLayout.SOUTH);
-        col.add(sCard, BorderLayout.CENTER);
+        cgc.gridy = 1; cgc.insets = new Insets(5, 0, 5, 0); col.add(sCard, cgc);
 
         // Lookup card
         JPanel lCard = UITheme.makeCard(new BorderLayout(0, 8));
@@ -170,7 +175,7 @@ public class RetrievalPanel extends JPanel {
         lookupResultLabel.setBorder(new EmptyBorder(4, 0, 0, 0));
         lCard.add(lookupResultLabel, BorderLayout.SOUTH);
 
-        col.add(lCard, BorderLayout.SOUTH);
+        cgc.gridy = 2; cgc.insets = new Insets(5, 0, 0, 0); col.add(lCard, cgc);
         return col;
     }
 

@@ -335,6 +335,9 @@ public class UserPanel extends JPanel {
         JLabel nameRow  = makeInfoLabel("Driver Name:", name, green);
         JLabel gateRow  = makeInfoLabel("Entry Gate:", gate, green);
 
+        JButton exitBtn = UITheme.makeButton("Exit", UITheme.DANGER);
+        exitBtn.addActionListener(e -> exitVehicle(bubble, plate, slot, gate));
+
         GridBagConstraints badgeGc = new GridBagConstraints();
         badgeGc.gridx = 0; badgeGc.gridy = 0;
         badgeGc.anchor = GridBagConstraints.WEST;
@@ -346,7 +349,8 @@ public class UserPanel extends JPanel {
         gc.gridy = 2; gc.insets = new Insets(0, 0, 12, 0); body.add(sep, gc);
         gc.gridy = 3; gc.insets = new Insets(0, 0, 4, 0);  body.add(plateRow, gc);
         gc.gridy = 4; gc.insets = new Insets(0, 0, 4, 0);  body.add(nameRow, gc);
-        gc.gridy = 5; gc.insets = new Insets(0, 0, 0, 0);  body.add(gateRow, gc);
+        gc.gridy = 5; gc.insets = new Insets(0, 0, 14, 0); body.add(gateRow, gc);
+        gc.gridy = 6; gc.insets = new Insets(0, 0, 0, 0);  body.add(exitBtn, gc);
 
         p.add(header, BorderLayout.NORTH);
         p.add(body,   BorderLayout.CENTER);
@@ -667,6 +671,13 @@ public class UserPanel extends JPanel {
         bubbleContainer.repaint();
     }
 
+    // Driver exits: log the departure, free up the slot, and clear the card.
+    private void exitVehicle(JPanel bubble, String plate, String slot, String gate) {
+        log.log("USER  Car plate " + plate + " has exited (slot " + slot + " freed up).");
+        setStatus(plate + " has exited — slot " + slot + " is now free.", UITheme.SUCCESS);
+        removeBubble(bubble);
+    }
+
     public boolean removeVehicleByPlate(String plate) {
         JPanel bubble = findBubbleByPlate(plate);
         if (bubble == null) {
@@ -819,6 +830,10 @@ public class UserPanel extends JPanel {
             return null;
         }
 
+        // parkingMap is the single source of truth shared with the Slot Priority panel.
+        // Sync our private graph from it first so we never hand out a slot already taken elsewhere.
+        syncGraphFromParkingMap();
+
         String startNode = resolveStartNode(vehicle.getPreferredGateId());
         java.util.List<String> path = navigation.DijkstraPathfinder.findShortestPathToAvailableSpot(graph, startNode);
         if (path.isEmpty()) {
@@ -841,6 +856,17 @@ public class UserPanel extends JPanel {
             slotRecord.setParkedVehicle(vehicle);
         }
         return slotId;
+    }
+
+    /** Mirror the shared parking map's occupancy onto our private route graph. */
+    private void syncGraphFromParkingMap() {
+        if (parkingMap == null || graph == null) {
+            return;
+        }
+        for (int i = 0; i < ParkingMap.total(); i++) {
+            String id = ParkingMap.slotId(i);
+            graph.setOccupancy(id, parkingMap.isOccupied(id));
+        }
     }
 
     private void releaseAssignedSlot(Vehicle vehicle) {

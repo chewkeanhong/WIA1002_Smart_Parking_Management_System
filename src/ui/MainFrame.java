@@ -214,16 +214,9 @@ public class MainFrame extends JFrame {
     }
 
     // ── Navigation ────────────────────────────────────────────────────────────
-    private static final int SLOT_PRIORITY_IDX = 2;
-    private int currentIdx = 0;
-
     private void showPanel(int idx) {
-        // Leaving Slot Priority → reset it to default
-        if (currentIdx == SLOT_PRIORITY_IDX && idx != SLOT_PRIORITY_IDX && assignmentPanel != null) {
-            assignmentPanel.resetQuiet();
-        }
-        currentIdx = idx;
-
+        // Keep whatever the user typed / built on Slot Priority when navigating away;
+        // the panel persists in the CardLayout and is only cleared via the Reset All button.
         for (int i = 0; i < navBtns.length; i++) {
             boolean active = (i == idx);
             navBtns[i].setBackground(active ? UITheme.ACCENT      : UITheme.BG_SIDEBAR);
