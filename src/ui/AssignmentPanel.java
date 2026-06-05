@@ -236,7 +236,7 @@ public class AssignmentPanel extends JPanel {
 
     // Right: heap visual + comparison table
     private JPanel buildRightColumn() {
-        JPanel col = new JPanel(new BorderLayout(0, 12));
+        JPanel col = new JPanel(new GridBagLayout());
         col.setOpaque(false);
 
         // Heap visualiser
@@ -264,18 +264,24 @@ public class AssignmentPanel extends JPanel {
                 super.paintComponent(g);
                 drawHeap((Graphics2D) g);
             }
+            @Override public Dimension getPreferredSize() { return new Dimension(400, 220); }
+            @Override public Dimension getMinimumSize()   { return new Dimension(100, 160); }
         };
         heapCanvas.setBackground(UITheme.BG_INPUT);
-        heapCanvas.setPreferredSize(new Dimension(0, 170));
         heapCard.add(heapCanvas, BorderLayout.CENTER);
 
         // Heap array table
         JTable ht = new JTable(heapTableModel);
         UITheme.styleTable(ht);
-        ht.setPreferredScrollableViewportSize(new Dimension(0, 90));
+        ht.setPreferredScrollableViewportSize(new Dimension(0, 70));
         heapCard.add(UITheme.wrapScroll(ht), BorderLayout.SOUTH);
 
-        col.add(heapCard, BorderLayout.CENTER);
+        GridBagConstraints hgc = new GridBagConstraints();
+        hgc.gridx = 0; hgc.gridy = 0;
+        hgc.weightx = 1.0; hgc.weighty = 0.58;
+        hgc.fill = GridBagConstraints.BOTH;
+        hgc.insets = new Insets(0, 0, 12, 0);
+        col.add(heapCard, hgc);
 
         // Comparison table
         JPanel cmpCard = UITheme.makeCard(new BorderLayout(0, 8));
@@ -325,7 +331,11 @@ public class AssignmentPanel extends JPanel {
         cmpTableWrap.add(cmpTable, BorderLayout.CENTER);
         cmpCard.add(cmpTableWrap, BorderLayout.CENTER);
 
-        col.add(cmpCard, BorderLayout.SOUTH);
+        GridBagConstraints cgc = new GridBagConstraints();
+        cgc.gridx = 0; cgc.gridy = 1;
+        cgc.weightx = 1.0; cgc.weighty = 0.42;
+        cgc.fill = GridBagConstraints.BOTH;
+        col.add(cmpCard, cgc);
         return col;
     }
 
@@ -544,70 +554,120 @@ public class AssignmentPanel extends JPanel {
         heapCanvas.repaint();
     }
 
-    // Heap tree painter
+    // Returns the [x, y] centre of heap node i inside the canvas.
+    private int[] nodePos(int i, int W, int topPad, int levelH) {
+        int level      = (int)(Math.log(i + 1) / Math.log(2));
+        int posInLevel = i - ((1 << level) - 1);
+        int nodesInLevel = 1 << level;
+        int x = (int)(W * (posInLevel + 0.5) / nodesInLevel);
+        int y = topPad + level * levelH;
+        return new int[]{x, y};
+    }
+
+    // Heap tree painter — fully adaptive: sizes nodes to fit whatever height the canvas actually receives.
     private void drawHeap(Graphics2D g) {
-        g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+        g.setRenderingHint(RenderingHints.KEY_ANTIALIASING,      RenderingHints.VALUE_ANTIALIAS_ON);
+        g.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
         ParkingSlot[] slots = allocator.getHeap().toArray();
+
+        int W = heapCanvas.getWidth();
+        int H = heapCanvas.getHeight();
 
         if (slots.length == 0) {
             g.setColor(UITheme.TEXT_MUTED);
             g.setFont(UITheme.FONT_BODY);
-            g.drawString("Heap is empty — add slots to visualise", 20, heapCanvas.getHeight() / 2);
+            FontMetrics fm = g.getFontMetrics();
+            String msg = "Heap is empty — add slots to visualise";
+            g.drawString(msg, Math.max(8, (W - fm.stringWidth(msg)) / 2), H / 2);
             return;
         }
 
-        int W = heapCanvas.getWidth();
-        int nodeR = 22;
-        int levelH = 54;
-        // Only draw up to 7 nodes (3 levels) for clarity
-        int drawCount = Math.min(slots.length, 7);
+        // Show up to 15 nodes (4 levels)
+        int drawCount  = Math.min(slots.length, 15);
+        int numLevels  = (int)(Math.log(drawCount) / Math.log(2)) + 1;
+
+        // Scale node radius so the full tree fits vertically.
+        // Reserve 28px top + 22px bottom for labels; distribute the rest across levels.
+        int nodeR  = Math.max(14, Math.min(26, (H - 50) / Math.max(numLevels * 3, 1)));
+        int topPad = nodeR + 10;
+        int botPad = nodeR + 16;
+        int levelH = numLevels > 1
+                     ? Math.max(nodeR * 2 + 8, (H - topPad - botPad) / (numLevels - 1))
+                     : H - topPad - botPad;
+
+        // Pass 1: edges
+        g.setStroke(new BasicStroke(1.8f));
+        g.setColor(UITheme.BORDER_LIGHT);
+        for (int i = 1; i < drawCount; i++) {
+            int[] pos  = nodePos(i, W, topPad, levelH);
+            int[] ppos = nodePos((i - 1) / 2, W, topPad, levelH);
+            double dx   = pos[0] - ppos[0];
+            double dy   = pos[1] - ppos[1];
+            double dist = Math.sqrt(dx * dx + dy * dy);
+            if (dist < 1) continue;
+            g.drawLine(
+                ppos[0] + (int)(dx * nodeR / dist), ppos[1] + (int)(dy * nodeR / dist),
+                pos[0]  - (int)(dx * nodeR / dist), pos[1]  - (int)(dy * nodeR / dist));
+        }
+
+        // Pass 2: nodes
+        int idFontSz   = Math.max(8,  nodeR - 14);
+        int distFontSz = Math.max(7,  nodeR - 16);
+        int idxFontSz  = 9;
 
         for (int i = 0; i < drawCount; i++) {
-            int level = (int)(Math.log(i + 1) / Math.log(2));
-            int posInLevel = i - ((1 << level) - 1);
-            int nodesInLevel = 1 << level;
-            int x = (int)(W * (posInLevel + 0.5) / nodesInLevel);
-            int y = 30 + level * levelH;
-
-            // Draw edge to parent
-            if (i > 0) {
-                int parent = (i - 1) / 2;
-                int pLevel = (int)(Math.log(parent + 1) / Math.log(2));
-                int pPosInLevel = parent - ((1 << pLevel) - 1);
-                int pNodesInLevel = 1 << pLevel;
-                int px = (int)(W * (pPosInLevel + 0.5) / pNodesInLevel);
-                int py = 30 + pLevel * levelH;
-                g.setColor(UITheme.BORDER_LIGHT);
-                g.setStroke(new BasicStroke(1.5f));
-                g.drawLine(x, y - nodeR, px, py + nodeR);
-            }
-
-            // Draw circle
+            int[] pos  = nodePos(i, W, topPad, levelH);
+            int x = pos[0], y = pos[1];
             boolean isRoot = (i == 0);
-            g.setColor(isRoot ? UITheme.ACCENT : UITheme.BG_CARD);
+
+            // Drop shadow
+            g.setColor(new Color(0, 0, 0, 70));
+            g.fillOval(x - nodeR + 2, y - nodeR + 3, nodeR * 2, nodeR * 2);
+
+            // Fill
+            if (isRoot) {
+                g.setPaint(new GradientPaint(
+                    x - nodeR, y - nodeR, UITheme.ACCENT,
+                    x + nodeR, y + nodeR, UITheme.ACCENT_HOVER));
+            } else {
+                g.setColor(UITheme.BG_CARD);
+            }
             g.fillOval(x - nodeR, y - nodeR, nodeR * 2, nodeR * 2);
-            g.setColor(isRoot ? UITheme.ACCENT_HOVER : UITheme.BORDER_LIGHT);
-            g.setStroke(new BasicStroke(1.5f));
+
+            // Border ring
+            g.setStroke(new BasicStroke(2f));
+            g.setPaint(isRoot ? UITheme.ACCENT_HOVER : UITheme.BORDER_LIGHT);
             g.drawOval(x - nodeR, y - nodeR, nodeR * 2, nodeR * 2);
 
-            // Label: slot id on top, dist below
-            g.setFont(new Font("Segoe UI", Font.BOLD, 9));
+            // Slot ID (top half of bubble)
+            g.setFont(new Font("Segoe UI", Font.BOLD, idFontSz));
             g.setColor(Color.WHITE);
             FontMetrics fm = g.getFontMetrics();
             String idText = slots[i].getSlotId();
-            if (idText.length() > 6) idText = idText.substring(0, 6);
-            g.drawString(idText, x - fm.stringWidth(idText) / 2, y - 2);
-            String distText = slots[i].getDistanceToGate() + "m";
-            g.setFont(new Font("Segoe UI", Font.PLAIN, 8));
+            if (idText.length() > 5) idText = idText.substring(0, 5);
+            g.drawString(idText, x - fm.stringWidth(idText) / 2, y - 1);
+
+            // Distance (bottom half of bubble)
+            if (nodeR >= 18) {
+                g.setFont(new Font("Segoe UI", Font.PLAIN, distFontSz));
+                g.setColor(isRoot ? new Color(200, 230, 255) : UITheme.TEXT_SECONDARY);
+                fm = g.getFontMetrics();
+                String distText = slots[i].getDistanceToGate() + "m";
+                g.drawString(distText, x - fm.stringWidth(distText) / 2, y + fm.getAscent());
+            }
+
+            // Index label below the bubble
+            g.setFont(new Font("Segoe UI", Font.PLAIN, idxFontSz));
+            g.setColor(UITheme.TEXT_MUTED);
             fm = g.getFontMetrics();
-            g.setColor(isRoot ? new Color(200, 230, 255) : UITheme.TEXT_SECONDARY);
-            g.drawString(distText, x - fm.stringWidth(distText) / 2, y + 10);
+            String lbl = isRoot ? "root" : "[" + (i + 1) + "]";
+            g.drawString(lbl, x - fm.stringWidth(lbl) / 2, y + nodeR + 12);
         }
 
-        if (slots.length > 7) {
+        if (slots.length > 15) {
             g.setColor(UITheme.TEXT_MUTED);
             g.setFont(UITheme.FONT_SMALL);
-            g.drawString("... +" + (slots.length - 7) + " more nodes (shown in table)", 8, heapCanvas.getHeight() - 8);
+            g.drawString("... +" + (slots.length - 15) + " more nodes (shown in table)", 8, H - 6);
         }
     }
 
