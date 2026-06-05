@@ -477,7 +477,10 @@ public class AssignmentPanel extends JPanel {
         allocator.clearSlots();
         String gateNode = normalizeGate((String) heapGateChoice.getSelectedItem());
         for (ParkingSlot slot : registeredSlots) {
-            if (!slot.isOccupied()) {
+            // parkingMap is the shared source of truth — exclude slots already taken
+            // by the Entry/Exit (User) panel even if this panel's own flag is stale.
+            boolean liveOccupied = parkingMap != null && parkingMap.isOccupied(slot.getSlotId());
+            if (!slot.isOccupied() && !liveOccupied) {
                 int routeCost = computeRouteCost(gateNode, slot.getSlotId());
                 slot.setDistanceToGate(routeCost);
                 allocator.addSlot(slot);
