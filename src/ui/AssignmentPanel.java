@@ -294,7 +294,6 @@ public class AssignmentPanel extends JPanel {
         cmpTable.setColumnSelectionAllowed(false);
         cmpTable.setCellSelectionEnabled(false);
         cmpTable.setAutoResizeMode(JTable.AUTO_RESIZE_ALL_COLUMNS);
-        cmpTable.setPreferredScrollableViewportSize(new Dimension(0, 200));
         cmpTable.getColumnModel().getColumn(0).setPreferredWidth(160);
         cmpTable.getColumnModel().getColumn(1).setPreferredWidth(140);
         cmpTable.getColumnModel().getColumn(2).setPreferredWidth(220);
@@ -320,7 +319,14 @@ public class AssignmentPanel extends JPanel {
         for (int i = 0; i < cmpTable.getColumnCount(); i++) {
             cmpTable.getColumnModel().getColumn(i).setCellRenderer(wrapRenderer);
         }
-        cmpCard.add(UITheme.wrapScroll(cmpTable), BorderLayout.CENTER);
+        // Show the full table (3 rows) inline — no scroll pane, so every row is
+        // visible at once and there is no vertical slider to drag.
+        JPanel cmpTableWrap = new JPanel(new BorderLayout());
+        cmpTableWrap.setBackground(UITheme.BG_TABLE_ROW);
+        cmpTableWrap.setBorder(BorderFactory.createLineBorder(UITheme.BORDER, 1));
+        cmpTableWrap.add(cmpTable.getTableHeader(), BorderLayout.NORTH);
+        cmpTableWrap.add(cmpTable, BorderLayout.CENTER);
+        cmpCard.add(cmpTableWrap, BorderLayout.CENTER);
 
         col.add(cmpCard, BorderLayout.SOUTH);
         return col;
