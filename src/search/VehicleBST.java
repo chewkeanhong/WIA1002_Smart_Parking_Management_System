@@ -4,35 +4,31 @@ import models.Vehicle;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * Self-balancing AVL Tree keyed by license plate.
- * Insert / Search / Delete: O(log n) guaranteed.
- * In-order traversal yields alphabetically sorted vehicles: O(n).
- */
+// AVL tree of vehicles keyed by license plate. It rebalances itself on
+// every insert/delete so it stays roughly balanced and searches stay fast.
+// An in-order walk gives the vehicles back sorted by plate.
 public class VehicleBST {
 
     private TreeNode root;
-
-    // ── Public API ────────────────────────────────────────────────────────────
 
     public void insert(Vehicle vehicle) {
         root = insert(root, vehicle.getLicensePlate(), vehicle);
     }
 
-    /** Returns the Vehicle matching the plate, or null if not found — O(log n). */
+    // find a vehicle by plate, or null if it's not in the tree
     public Vehicle search(String plate) {
         TreeNode n = find(root, plate);
         return n == null ? null : n.vehicle;
     }
 
-    /** Deletes by plate — O(log n). Returns false if not found. */
+    // delete by plate. returns false if there was nothing to delete.
     public boolean delete(String plate) {
         if (find(root, plate) == null) return false;
         root = delete(root, plate);
         return true;
     }
 
-    /** Returns all vehicles sorted alphabetically by plate — O(n). */
+    // all vehicles, sorted alphabetically by plate
     public List<Vehicle> inOrder() {
         List<Vehicle> out = new ArrayList<>();
         inOrder(root, out);
@@ -42,14 +38,13 @@ public class VehicleBST {
     public TreeNode getRoot()   { return root; }
     public boolean  isEmpty()   { return root == null; }
 
-    // ── Recursive helpers ─────────────────────────────────────────────────────
-
+    // recursive insert, then fix the height and rebalance on the way back up
     private TreeNode insert(TreeNode n, String key, Vehicle v) {
         if (n == null) return new TreeNode(key, v);
         int c = key.compareTo(n.key);
         if      (c < 0) n.left  = insert(n.left,  key, v);
         else if (c > 0) n.right = insert(n.right, key, v);
-        else { n.vehicle = v; return n; }   // duplicate → update
+        else { n.vehicle = v; return n; }   // same plate already exists, just update it
         n.height = 1 + Math.max(h(n.left), h(n.right));
         return balance(n);
     }
@@ -84,8 +79,8 @@ public class VehicleBST {
         inOrder(n.right, out);
     }
 
-    // ── AVL rotation / balance ────────────────────────────────────────────────
-
+    // check the balance factor and rotate if a side got too tall.
+    // bf > 1 means left-heavy, bf < -1 means right-heavy.
     private TreeNode balance(TreeNode n) {
         int bf = h(n.left) - h(n.right);
         if (bf > 1) {

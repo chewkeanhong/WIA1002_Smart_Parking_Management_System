@@ -10,7 +10,7 @@ import java.awt.*;
 
 public class MainFrame extends JFrame {
 
-    // ── Nav entries: [display text, card key, icon] ───────────────────────────
+    // Nav entries: [display text, card key, icon]
     private static final String[][] NAV = {
         { "Dashboard",    "Dashboard",    "🏠" },
         { "Entry / Exit", "Entry / Exit", "🚗" },
@@ -67,7 +67,7 @@ public class MainFrame extends JFrame {
         setVisible(true);
     }
 
-    // ── Layout assembly ───────────────────────────────────────────────────────
+    // Layout assembly
     private void buildUI() {
         setLayout(new BorderLayout());
         add(buildSidebar(),  BorderLayout.WEST);
@@ -106,7 +106,7 @@ public class MainFrame extends JFrame {
         return contentArea;
     }
 
-    // ── Sidebar ───────────────────────────────────────────────────────────────
+    // Sidebar
     private JPanel buildSidebar() {
         JPanel sidebar = new JPanel(new BorderLayout());
         sidebar.setBackground(UITheme.BG_SIDEBAR);
@@ -201,7 +201,7 @@ public class MainFrame extends JFrame {
     }
 
 
-    // ── System reset ──────────────────────────────────────────────────────────
+    // System reset
     private void resetSystem() {
         records.clearAll();
         parkingMap.clearOccupancy();
@@ -213,7 +213,7 @@ public class MainFrame extends JFrame {
         showPanel(0);
     }
 
-    // ── Navigation ────────────────────────────────────────────────────────────
+    // Navigation
     private void showPanel(int idx) {
         // Keep whatever the user typed / built on Slot Priority when navigating away;
         // the panel persists in the CardLayout and is only cleared via the Reset All button.

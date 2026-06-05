@@ -27,7 +27,7 @@ public class LogsPanel extends JPanel {
         log.addListener(this::refresh);
     }
 
-    // ── Header ────────────────────────────────────────────────────────────────
+    // Header
     private JPanel buildHeader() {
         JPanel p = new JPanel(new BorderLayout());
         p.setOpaque(false);
@@ -56,7 +56,7 @@ public class LogsPanel extends JPanel {
         return p;
     }
 
-    // ── Body ──────────────────────────────────────────────────────────────────
+    // Body
     private JPanel buildBody() {
         JPanel card = UITheme.makeCard(new BorderLayout());
 
@@ -70,7 +70,7 @@ public class LogsPanel extends JPanel {
         return card;
     }
 
-    // ── Refresh ───────────────────────────────────────────────────────────────
+    // Refresh
     private void refresh() {
         List<String> entries = log.getEntries();
         StringBuilder sb = new StringBuilder();

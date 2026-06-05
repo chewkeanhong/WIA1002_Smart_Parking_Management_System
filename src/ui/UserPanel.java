@@ -86,8 +86,7 @@ public class UserPanel extends JPanel {
         add(statusLabel,   BorderLayout.SOUTH);
     }
 
-    // ── Header ────────────────────────────────────────────────────────────────
-
+    // Header
     private JPanel buildHeader() {
         JPanel p = new JPanel(new BorderLayout(0, 6));
         p.setOpaque(false);
@@ -111,8 +110,7 @@ public class UserPanel extends JPanel {
         return p;
     }
 
-    // ── Bubble shell ──────────────────────────────────────────────────────────
-
+    // Bubble shell
     private void addBubble() {
         bubbleCounter++;
         final int number = bubbleCounter;
@@ -139,8 +137,7 @@ public class UserPanel extends JPanel {
         addTrackedWaitingBubble(vehicle, true);
     }
 
-    // ── State 1: Input form ───────────────────────────────────────────────────
-
+    // State 1: Input form
     private JPanel buildInputCard(JPanel bubble, CardLayout cl, int number) {
         JPanel p = new JPanel(new BorderLayout(0, 0));
         p.setBackground(UITheme.BG_CARD);
@@ -207,8 +204,7 @@ public class UserPanel extends JPanel {
         return l;
     }
 
-    // ── State 2: Waiting card ─────────────────────────────────────────────────
-
+    // State 2: Waiting card
     private JPanel buildWaitingCard(JPanel bubble, int number, String plate, String name,
                                     String gateLabelText, JLabel[] posLabelRef, JLabel[] totalLabelRef) {
         JPanel p = new JPanel(new BorderLayout(0, 12));
@@ -288,8 +284,7 @@ public class UserPanel extends JPanel {
         return p;
     }
 
-    // ── State 3: Assigned card ────────────────────────────────────────────────
-
+    // State 3: Assigned card
     private JPanel buildAssignedCard(JPanel bubble, int number,
                                      String plate, String name, String slot, String gate) {
         Color bg     = new Color(18, 46, 26);
@@ -504,8 +499,7 @@ public class UserPanel extends JPanel {
         bubbleTimers.put(bubble, timer);
     }
 
-    // ── Submit → state-machine timer ─────────────────────────────────────────
-
+    // Submit → state-machine timer
     private void submitToQueue(JPanel bubble, CardLayout cl,
                                JTextField plateField, JTextField nameField,
                                JComboBox<String> gateChoice, int number) {
@@ -558,7 +552,7 @@ public class UserPanel extends JPanel {
             }
 
             if (currentState[0] == 1) {
-                // ── WAITING ───────────────────────────────────────────────
+                // WAITING
                 // Check if management assigned a slot directly
                 Vehicle latestV = records == null ? null : records.findVehicleByPlate(plate);
                 String managedSlot2 = (latestV != null) ? latestV.getAssignedSlotId() : null;
@@ -614,7 +608,7 @@ public class UserPanel extends JPanel {
                 }
 
             } else if (currentState[0] == 2) {
-                // ── ASSIGNED — watch for management slot reassignment ─────
+                // ASSIGNED — watch for management slot reassignment
                 Vehicle latestV2 = records == null ? null : records.findVehicleByPlate(plate);
                 String newSlot2 = (latestV2 != null) ? latestV2.getAssignedSlotId() : null;
                 if (newSlot2 != null && !newSlot2.equals(slotRef[0])) {
@@ -651,8 +645,7 @@ public class UserPanel extends JPanel {
         bubbleTimers.put(bubble, timer);
     }
 
-    // ── Helpers ───────────────────────────────────────────────────────────────
-
+    // Helpers
     private void removeBubble(JPanel bubble) {
         Timer t = bubbleTimers.remove(bubble);
         if (t != null) t.stop();

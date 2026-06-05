@@ -1,10 +1,8 @@
 package models;
 
-/**
- * Shared live state of the 40-slot parking lot (A01–A40), arranged as
- * two 2×10 blocks separated by a central driving aisle.
- * All mutations happen on the EDT so no synchronization is needed.
- */
+// Tracks which of the 40 slots (A01-A40) are taken. The lot is laid out as
+// two 2x10 blocks with a driving aisle down the middle. Just a boolean array
+// under the hood - true means occupied.
 public class ParkingMap {
 
     private static final int BLOCKS         = 2;
@@ -19,7 +17,7 @@ public class ParkingMap {
     public static int cols()  { return COLS; }
     public static int total() { return TOTAL; }
 
-    /** Canonical slot ID for zero-based index i → "A01" … "A30". */
+    // turn an index into a slot id, e.g. 0 -> "A01"
     public static String slotId(int i) {
         return String.format("A%02d", i + 1);
     }
@@ -37,7 +35,7 @@ public class ParkingMap {
 
     public boolean isOccupied(String id) { int i = idx(id); return i >= 0 && occupied[i]; }
 
-    /** Returns the slot ID of the first free bay, or null if the lot is full. */
+    // first free slot's id, or null if the whole lot is full
     public String findFirstFree() {
         for (int i = 0; i < TOTAL; i++) if (!occupied[i]) return slotId(i);
         return null;

@@ -3,18 +3,15 @@ package retrieval;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * Custom hash table with separate chaining (linked-list buckets).
- * Put / Get / Remove: O(1) average  |  O(n) worst-case (all in one bucket).
- * Automatically resizes at 75 % load factor to maintain O(1) amortised.
- */
+// Our own hash table. Collisions are handled with separate chaining -
+// each bucket is a little linked list of entries. Once it gets too full
+// (past 75%) we grow the table and rehash everything.
 public class HashMap<K, V> {
 
-    // Start small and grow on demand when the table becomes crowded.
     private static final int DEFAULT_CAP  = 16;
     private static final double LOAD_FACTOR  = 0.75;
 
-    // Each bucket stores a linked list of entries that share the same index.
+    // one node in a bucket chain
     private static class Entry<K, V> {
         K key; 
         V value; 
@@ -41,46 +38,35 @@ public class HashMap<K, V> {
         this.buckets  = new Entry[initialCapacity];
     }
 
-    // Core ops
-
-    /**
-     * Store or update a key-value pair.
-     * If the key already exists in the bucket chain, only the value changes.
-     */
+    // add a key/value, or just update the value if the key is already there
     public void put(K key, V value) {
-        if ((double) size / capacity >= LOAD_FACTOR) 
+        if ((double) size / capacity >= LOAD_FACTOR)
             resize();
 
         int idx = index(key);
 
         for (Entry<K, V> e = buckets[idx]; e != null; e = e.next) {
-            if (e.key.equals(key)) { 
-                e.value = value; return; 
+            if (e.key.equals(key)) {
+                e.value = value; return;
             }
         }
 
-        // New key: insert at the head of the bucket chain.
+        // brand new key - stick it at the front of the chain
         Entry<K, V> n = new Entry<>(key, value);
-        n.next = buckets[idx]; 
-        buckets[idx] = n; 
+        n.next = buckets[idx];
+        buckets[idx] = n;
         size++;
     }
 
-    /**
-     * Retrieve a value by key by walking only one bucket chain.
-     * Returns null when the key is not present.
-     */
+    // look up a value - only has to scan one bucket's chain. null if missing.
     public V get(K key) {
         for (Entry<K, V> e = buckets[index(key)]; e != null; e = e.next)
-            if (e.key.equals(key)) 
+            if (e.key.equals(key))
                 return e.value;
         return null;
     }
 
-    /**
-     * Remove a key from its bucket chain.
-     * The previous node is tracked so the chain can be relinked correctly.
-     */
+    // remove a key. we track the previous node so we can relink around it.
     public boolean remove(K key) {
         int idx = index(key);
         Entry<K, V> cur = buckets[idx], 
@@ -114,7 +100,6 @@ public class HashMap<K, V> {
         return capacity; 
     }
 
-    /** Reset the table back to an empty state. */
     @SuppressWarnings("unchecked")
     public void clear() {
         buckets = new Entry[DEFAULT_CAP];
@@ -122,10 +107,7 @@ public class HashMap<K, V> {
         capacity = DEFAULT_CAP;
     }
 
-    /**
-     * Return all stored entries as [bucketIndex, key, value] string triples.
-     * This is used for UI display, so the order follows bucket traversal.
-     */
+    // flatten everything into [bucket, key, value] rows for the UI table
     public List<String[]> getEntries() {
         List<String[]> list = new ArrayList<>();
         for (int i = 0; i < capacity; i++)
@@ -134,23 +116,20 @@ public class HashMap<K, V> {
         return list;
     }
 
-    // Internal helpers
-
-    // Map a key to a bucket index using its hash code.
-    private int index(K key) { 
-        return Math.abs(key.hashCode()) % capacity; 
+    // which bucket a key lands in
+    private int index(K key) {
+        return Math.abs(key.hashCode()) % capacity;
     }
 
     @SuppressWarnings("unchecked")
     private void resize() {
-        // Rebuild the table with twice the capacity so collisions stay lower.
+        // double the capacity and re-hash every entry into the new table
         capacity *= 2;
         Entry<K, V>[] nb = new Entry[capacity];
         for (int i = 0; i < buckets.length; i++) {
             Entry<K, V> e = buckets[i];
             while (e != null) {
                 Entry<K, V> next = e.next;
-                // Recompute the bucket because the capacity has changed.
                 int ni = Math.abs(e.key.hashCode()) % capacity;
                 e.next = nb[ni]; nb[ni] = e;
                 e = next;

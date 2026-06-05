@@ -17,11 +17,8 @@ import java.awt.*;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * Module 3 — Parking Slot Assignment
- * Data Structure: Binary Min-Heap (Priority Queue)
- * Insert: O(log n)  |  Extract-min: O(log n)  |  vs O(n) linear scan
- */
+// Slot assignment screen. Uses the min-heap (PriorityAllocator) to hand out
+// the nearest free slot, and shows the heap as both a tree and a table.
 public class AssignmentPanel extends JPanel {
 
     private static final String DEFAULT_ACCESS_NODE = "ENTRANCE";
@@ -88,7 +85,7 @@ public class AssignmentPanel extends JPanel {
         add(buildComplexity(), BorderLayout.SOUTH);
     }
 
-    // ── Header ────────────────────────────────────────────────────────────────
+    // Header
     private JPanel buildHeader() {
         JPanel p = new JPanel(new BorderLayout());
         p.setOpaque(false);
@@ -117,7 +114,7 @@ public class AssignmentPanel extends JPanel {
         return p;
     }
 
-    // ── Body ──────────────────────────────────────────────────────────────────
+    // Body
     private JPanel buildBody() {
         JPanel p = new JPanel(new GridBagLayout());
         p.setOpaque(false);
@@ -139,7 +136,7 @@ public class AssignmentPanel extends JPanel {
         return p;
     }
 
-    // ── Left: add slots + assign ──────────────────────────────────────────────
+    // Left: add slots + assign
     private JPanel buildLeftColumn() {
         JPanel col = new JPanel(new GridBagLayout());
         col.setOpaque(false);
@@ -237,7 +234,7 @@ public class AssignmentPanel extends JPanel {
         return col;
     }
 
-    // ── Right: heap visual + comparison table ─────────────────────────────────
+    // Right: heap visual + comparison table
     private JPanel buildRightColumn() {
         JPanel col = new JPanel(new BorderLayout(0, 12));
         col.setOpaque(false);
@@ -332,7 +329,7 @@ public class AssignmentPanel extends JPanel {
         return col;
     }
 
-    // ── Complexity banner ─────────────────────────────────────────────────────
+    // Complexity banner
     private JPanel buildComplexity() {
         return UITheme.makeComplexityBanner(
             "<b>Min-Heap Advantage:</b> &nbsp;" +
@@ -343,7 +340,7 @@ public class AssignmentPanel extends JPanel {
         );
     }
 
-    // ── Actions ───────────────────────────────────────────────────────────────
+    // Actions
     private void addSlot() {
         String id = tfSlotId.getText().trim().toUpperCase();
         if (id.isEmpty()) { status("Enter a slot ID.", UITheme.DANGER); return; }
@@ -547,7 +544,7 @@ public class AssignmentPanel extends JPanel {
         heapCanvas.repaint();
     }
 
-    // ── Heap tree painter ─────────────────────────────────────────────────────
+    // Heap tree painter
     private void drawHeap(Graphics2D g) {
         g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
         ParkingSlot[] slots = allocator.getHeap().toArray();

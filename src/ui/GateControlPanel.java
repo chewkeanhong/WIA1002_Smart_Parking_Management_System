@@ -41,8 +41,7 @@ public class GateControlPanel extends JPanel {
         this(log, new GateProcessor());
     }
 
-    // ── Header ────────────────────────────────────────────────────────────────
-
+    // Header
     private JPanel buildHeader() {
         JPanel p = new JPanel(new BorderLayout());
         p.setOpaque(false);
@@ -66,8 +65,7 @@ public class GateControlPanel extends JPanel {
         return p;
     }
 
-    // ── Body ─────────────────────────────────────────────────────────────────
-
+    // Body
     private JPanel buildBody() {
         JPanel p = new JPanel(new GridLayout(1, 2, 14, 0));
         p.setOpaque(false);
@@ -76,12 +74,11 @@ public class GateControlPanel extends JPanel {
         return p;
     }
 
-    // ── Left: Admin Approve + Queue list ─────────────────────────────────────
-
+    // Left: Admin Approve + Queue list
     private JPanel buildQueueCard() {
         JPanel card = UITheme.makeCard(new BorderLayout(0, 10));
 
-        // ── top section (header + approve block) ──
+        // top section (header + approve block)
         JPanel top = new JPanel();
         top.setOpaque(false);
         top.setLayout(new BoxLayout(top, BoxLayout.Y_AXIS));
@@ -132,7 +129,7 @@ public class GateControlPanel extends JPanel {
 
         card.add(top, BorderLayout.NORTH);
 
-        // ── Queue state list ──
+        // Queue state list
         JLabel vizTitle = UITheme.makeLabel("Queue state  (front → rear):");
         vizTitle.setBorder(new EmptyBorder(0, 0, 4, 0));
 
@@ -151,12 +148,11 @@ public class GateControlPanel extends JPanel {
         return card;
     }
 
-    // ── Right: Undo Stack ─────────────────────────────────────────────────────
-
+    // Right: Undo Stack
     private JPanel buildUndoCard() {
         JPanel card = UITheme.makeCard(new BorderLayout(0, 10));
 
-        // ── top: header + undo button (compact, stacked) ──
+        // top: header + undo button (compact, stacked)
         JPanel top = new JPanel();
         top.setOpaque(false);
         top.setLayout(new BoxLayout(top, BoxLayout.Y_AXIS));
@@ -185,7 +181,7 @@ public class GateControlPanel extends JPanel {
 
         card.add(top, BorderLayout.NORTH);
 
-        // ── centre: stack console (fills remaining space) ──
+        // centre: stack console (fills remaining space)
         JLabel vizTitle = UITheme.makeLabel("Stack state  (top is most recent):");
         vizTitle.setBorder(new EmptyBorder(0, 0, 4, 0));
 
@@ -204,8 +200,7 @@ public class GateControlPanel extends JPanel {
         return card;
     }
 
-    // ── Actions ───────────────────────────────────────────────────────────────
-
+    // Actions
     private void processNext() {
         Vehicle v = gate.processNext();
         if (v == null) { status("Queue is empty.", UITheme.WARNING); return; }
@@ -224,8 +219,7 @@ public class GateControlPanel extends JPanel {
         refreshStackVisual();
     }
 
-    // ── Refresh ───────────────────────────────────────────────────────────────
-
+    // Refresh
     private void refreshQueue() {
         queueVisual.removeAll();
         Vehicle[] queue = gate.getEntryQueue().toArray();

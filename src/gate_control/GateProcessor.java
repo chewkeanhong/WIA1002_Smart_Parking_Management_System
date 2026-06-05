@@ -2,10 +2,9 @@ package gate_control;
 
 import models.Vehicle;
 
-/**
- * Orchestrates the gate: incoming vehicles are queued (FIFO),
- * every mutation is recorded on the undo stack (LIFO).
- */
+// Ties the queue and the undo stack together. Every time a vehicle
+// moves through the gate we both update the queue and log the action
+// so it can be undone later.
 public class GateProcessor {
 
     private final EntryQueue entryQueue;
@@ -16,42 +15,39 @@ public class GateProcessor {
         undoStack  = new UndoStack();
     }
 
-    /** Vehicle arrives at the gate → enqueue. */
+    // car shows up at the gate -> join the queue
     public void vehicleArrives(Vehicle v) {
         entryQueue.enqueue(v);
         undoStack.push(new UndoStack.Action("ENQUEUED", v));
     }
 
-    /** Process next vehicle in line → dequeue. Returns null if queue empty. */
+    // let the next car through. null if nobody's waiting.
     public Vehicle processNext() {
         Vehicle v = entryQueue.dequeue();
         if (v != null) undoStack.push(new UndoStack.Action("PROCESSED", v));
         return v;
     }
 
-    /** Vehicle exits the lot manually. */
     public void vehicleExits(Vehicle v) {
         undoStack.push(new UndoStack.Action("EXITED", v));
     }
 
-    /**
-     * Undo the most recent recorded action AND reverse its effect on the queue.
-     * ENQUEUED → remove that vehicle from the back of the queue.
-     * PROCESSED → put that vehicle back at the front of the queue.
-     */
+    // undo the last thing that happened and actually reverse it in the queue:
+    //   ENQUEUED  -> take the car back off the end of the queue
+    //   PROCESSED -> put the car back at the front
     public UndoStack.Action undoLast() {
         UndoStack.Action action = undoStack.pop();
         if (action == null) return null;
 
         if ("ENQUEUED".equals(action.type)) {
-            entryQueue.removeLast();          // remove from back — O(n)
+            entryQueue.removeLast();
         } else if ("PROCESSED".equals(action.type)) {
-            entryQueue.enqueueAtFront(action.vehicle); // restore to front — O(1)
+            entryQueue.enqueueAtFront(action.vehicle);
         }
         return action;
     }
 
-    /** Returns true if a PROCESSED action for this plate exists in the undo stack. */
+    // true if this plate was already processed (approved) at some point
     public boolean wasApproved(String licensePlate) {
         String normalizedPlate = Vehicle.normalizePlate(licensePlate);
         for (UndoStack.Action a : undoStack.toArray()) {
@@ -71,11 +67,9 @@ public class GateProcessor {
         while (undoStack.pop()      != null) { /* drain stack */ }
     }
 
-    /**
-     * Cancels every trace of a vehicle inside the gate — removes it from the queue if still there,
-     * and removes any ENQUEUED / PROCESSED / EXITED actions referencing it from the undo stack.
-     * Use when a user-cancellation should make the vehicle disappear from the gate entirely.
-     */
+    // completely remove a vehicle from the gate: pull it out of the queue
+    // and delete any of its actions from the undo stack. used when a user
+    // cancels and we want it gone for good.
     public void purgeVehicle(Vehicle v) {
         if (v == null) return;
         entryQueue.remove(v);

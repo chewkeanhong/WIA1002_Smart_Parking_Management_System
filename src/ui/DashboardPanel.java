@@ -37,7 +37,7 @@ public class DashboardPanel extends JPanel {
         this(log, null, parkingMap);
     }
 
-    // ── Header ────────────────────────────────────────────────────────────────
+    // Header
     private JPanel buildHeader() {
         JPanel p = new JPanel(new BorderLayout());
         p.setOpaque(false);
@@ -67,7 +67,7 @@ public class DashboardPanel extends JPanel {
         return p;
     }
 
-    // ── Main content ──────────────────────────────────────────────────────────
+    // Main content
     private JPanel buildContent() {
         statVehicles = valueLabel("0", UITheme.ACCENT);
         statSlots    = valueLabel("0", UITheme.SUCCESS);
@@ -118,11 +118,11 @@ public class DashboardPanel extends JPanel {
     }
 
 
-    // ── Live Parking Map card ─────────────────────────────────────────────────
+    // Live Parking Map card
     private JPanel buildParkingMapCard() {
         JPanel card = UITheme.makeCard(new BorderLayout(0, 10));
 
-        // ── title row + legend
+        // title row + legend
         JPanel titleRow = new JPanel(new BorderLayout());
         titleRow.setOpaque(false);
         titleRow.add(UITheme.makeSectionTitle("Live Parking Map"), BorderLayout.WEST);
@@ -133,7 +133,7 @@ public class DashboardPanel extends JPanel {
         titleRow.add(legend, BorderLayout.EAST);
         card.add(titleRow, BorderLayout.NORTH);
 
-        // ── Build all slot cells (two 2×10 blocks = 40)
+        // Build all slot cells (two 2×10 blocks = 40)
         int total = ParkingMap.total();
         slotCells  = new JPanel[total];
         slotLabels = new JLabel[total];
@@ -149,7 +149,7 @@ public class DashboardPanel extends JPanel {
             slotLabels[i] = lbl;
         }
 
-        // ── Two 2×10 blocks separated by a central driving aisle
+        // Two 2×10 blocks separated by a central driving aisle
         int cellH       = 58;
         int laneH       = 26;          // horizontal road thickness (top / middle / bottom)
         int laneW       = 36;          // vertical road thickness (left / right)
@@ -174,7 +174,7 @@ public class DashboardPanel extends JPanel {
         slotsPanel.add(Box.createVerticalStrut(innerGap));
         slotsPanel.add(makeSlotRow(30, 40, cellH));
 
-        // ── Roads frame the slot grid on all four sides; gates sit on the side / top roads
+        // Roads frame the slot grid on all four sides; gates sit on the side / top roads
         JPanel lot = new JPanel(new BorderLayout());
         lot.setOpaque(false);
         lot.setAlignmentX(Component.LEFT_ALIGNMENT);
@@ -207,11 +207,11 @@ public class DashboardPanel extends JPanel {
         lot.add(makeSideGate("Gate B", laneW, labelStripW, gateGap, true),     BorderLayout.EAST);
         lot.add(slotsPanel,                                                    BorderLayout.CENTER);
 
-        // ── Entrance / Exit driveway directly below the framed lot
+        // Entrance / Exit driveway directly below the framed lot
         JPanel driveBar = buildDriveBar();
         driveBar.setAlignmentX(Component.LEFT_ALIGNMENT);
 
-        // ── BoxLayout Y_AXIS with vertical glue centres content, fills width
+        // BoxLayout Y_AXIS with vertical glue centres content, fills width
         JPanel centerWrapper = new JPanel();
         centerWrapper.setOpaque(false);
         centerWrapper.setLayout(new BoxLayout(centerWrapper, BoxLayout.Y_AXIS));
@@ -221,7 +221,7 @@ public class DashboardPanel extends JPanel {
         centerWrapper.add(Box.createVerticalGlue());
         card.add(centerWrapper, BorderLayout.CENTER);
 
-        // ── Stats bar
+        // Stats bar
         freeCountLabel     = UITheme.makeLabel("Free: " + ParkingMap.total());
         freeCountLabel.setForeground(UITheme.SUCCESS);
         occupiedCountLabel = UITheme.makeLabel("Occupied: 0");
@@ -314,7 +314,7 @@ public class DashboardPanel extends JPanel {
         return lane;
     }
 
-    // ── Corner pieces (asphalt fill where side road meets top/bottom road) ───
+    // Corner pieces (asphalt fill where side road meets top/bottom road)
     /** NORTH-row corner: asphalt fills a laneW × laneH block at the inner edge, aligned with the road. */
     private JPanel makeNorthCorner(int totalW, int totalH, int asphaltW, boolean asphaltOnRight, int topOffset) {
         JPanel p = new JPanel() {
@@ -351,7 +351,7 @@ public class DashboardPanel extends JPanel {
         return p;
     }
 
-    // ── Gate-label strip + composite "gate side" ─────────────────────────────
+    // Gate-label strip + composite "gate side"
     private JPanel makeLabelStrip(String gateText, int width, int height, boolean horizontalText) {
         JPanel strip = new JPanel(new GridBagLayout());
         strip.setBackground(UITheme.BG_CARD);
@@ -515,7 +515,7 @@ public class DashboardPanel extends JPanel {
         refreshMap();
     }
 
-    // ── System Modules card ───────────────────────────────────────────────────
+    // System Modules card
     private JPanel buildModulesCard() {
         JPanel card = UITheme.makeCard(new BorderLayout(0, 12));
         JLabel title = UITheme.makeSectionTitle("System Modules");

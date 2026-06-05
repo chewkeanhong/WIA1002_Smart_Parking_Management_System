@@ -10,6 +10,23 @@ can be searched and retrieved instantly, and routed to their bay on a map.
 
 ---
 
+## 👥 Authors
+
+> **WIA1002 Data Structures — Group Assignment**, Faculty of Computer Science &
+> Information Technology, University of Malaya.
+
+| Name | GitHub |
+|------|--------|
+| Tey Yong Zhun | [@TeyYongZhun](https://github.com/TeyYongZhun) |
+| Chew Kean Hong | [@chewkeanhong](https://github.com/chewkeanhong) |
+| Edrian Tan | [@Edrian55](https://github.com/Edrian55) |
+| Soo Kang Shi | [@sookangshi-sketch](https://github.com/sookangshi-sketch) |
+
+> _Note: please update this list with the full names and GitHub handles of all
+> group members._
+
+---
+
 ## ✨ Features
 
 | Module | What it does | Data Structure |
@@ -44,24 +61,87 @@ All of these are **hand-written** under [`src/`](src/):
 
 ## 📂 Project Structure
 
+The code is organised into **packages by responsibility** — each data-structure
+module is self-contained, and the `ui` package wires them together into the Swing
+interface. The dependency flow is roughly:
+
+```
+ui  →  (assignment · gate_control · management · retrieval · search · navigation)  →  models
+```
+
 ```
 WIA1002_Smart_Parking_Management_System/
-├── src/
-│   ├── core/          # Application entry point (SmartParkingApp)
-│   ├── models/        # Domain objects: Vehicle, ParkingSlot, ParkingMap
-│   ├── assignment/    # Min-Heap slot allocation
-│   ├── gate_control/  # Queue + undo stack gate logic
-│   ├── management/    # Linked-list record management
-│   ├── retrieval/     # Custom hash table fast lookup
-│   ├── search/        # AVL tree vehicle search
-│   ├── navigation/    # Graph + Dijkstra routing
-│   └── ui/            # Swing panels, theme, main window
-├── data/              # Runtime data files
-├── images/            # Image assets
-├── audio/             # Audio assets
-├── docs/              # Assignment brief & documentation
+│
+├── src/                              # All Java source code
+│   │
+│   ├── core/                         # ▶ Program entry point
+│   │   └── SmartParkingApp.java      #   main() — boots the Swing app
+│   │
+│   ├── models/                       # ▶ Domain objects (shared everywhere)
+│   │   ├── Vehicle.java              #   A car: license plate, type, timestamps
+│   │   ├── ParkingSlot.java          #   A bay: id, distance-to-gate, occupied?
+│   │   └── ParkingMap.java           #   Tracks which slots are occupied
+│   │
+│   ├── assignment/                   # ▶ Nearest-slot allocation  (MIN-HEAP)
+│   │   ├── SlotMinHeap.java          #   Binary min-heap ordered by distance
+│   │   └── PriorityAllocator.java    #   Facade: assign nearest free slot
+│   │
+│   ├── gate_control/                 # ▶ Gate entry/exit  (QUEUE + STACK)
+│   │   ├── EntryQueue.java           #   FIFO queue of arriving vehicles
+│   │   ├── UndoStack.java            #   LIFO stack of actions to undo
+│   │   └── GateProcessor.java        #   Orchestrates queue + undo together
+│   │
+│   ├── management/                   # ▶ Record storage  (LINKED LIST)
+│   │   ├── RecordLinkedList.java     #   Custom generic singly-linked list
+│   │   └── RecordManager.java        #   CRUD over the parking records
+│   │
+│   ├── retrieval/                    # ▶ Fast lookup  (HASH TABLE)
+│   │   ├── HashMap.java              #   Custom hash table (separate chaining)
+│   │   └── FastAccessor.java         #   O(1) lookup by plate / slot id
+│   │
+│   ├── search/                       # ▶ Vehicle search  (AVL TREE)
+│   │   ├── TreeNode.java             #   A node of the balanced tree
+│   │   ├── VehicleBST.java           #   Self-balancing AVL tree (by plate)
+│   │   └── SearchEngine.java         #   Facade over the tree
+│   │
+│   ├── navigation/                   # ▶ Shortest-path routing  (GRAPH)
+│   │   ├── RouteGraph.java           #   Weighted graph of nodes/bays
+│   │   └── DijkstraPathfinder.java   #   Dijkstra shortest-path algorithm
+│   │
+│   └── ui/                           # ▶ Swing user interface
+│       ├── MainFrame.java            #   Admin window + sidebar navigation
+│       ├── UserFrame.java            #   User-facing window
+│       ├── RoleSelectionScreen.java  #   Admin / User role picker
+│       ├── UITheme.java              #   Shared colors, fonts, components
+│       ├── ActivityLog.java          #   In-memory log of system actions
+│       ├── DashboardPanel.java       #   Overview & stats screen
+│       ├── GateControlPanel.java     #   Entry / Exit screen
+│       ├── AssignmentPanel.java      #   Slot Priority screen
+│       ├── SearchPanel.java          #   Search screen
+│       ├── NavigationPanel.java      #   Routes screen
+│       ├── LogsPanel.java            #   Logs screen
+│       ├── ManagementPanel.java      #   Management screen
+│       ├── RetrievalPanel.java       #   Retrieval screen
+│       └── UserPanel.java            #   User screen
+│
+├── data/                             # Runtime data files
+├── images/                           # Image assets (icons, map art)
+├── audio/                            # Audio assets
+├── docs/                             # Assignment brief (PDF) & documentation
+├── out/  ·  bin/                     # Compiled .class output (generated)
 └── README.md
 ```
+
+**How a package maps to its data structure**
+
+| Package | Data Structure | Core class |
+|---------|----------------|-----------|
+| `assignment` | Min-Heap (priority queue) | `SlotMinHeap` |
+| `gate_control` | Queue + Stack | `EntryQueue`, `UndoStack` |
+| `management` | Linked List | `RecordLinkedList` |
+| `retrieval` | Hash Table | `HashMap` |
+| `search` | AVL Tree | `VehicleBST` |
+| `navigation` | Graph + Dijkstra | `RouteGraph`, `DijkstraPathfinder` |
 
 ---
 
@@ -110,12 +190,6 @@ java -cp out core.SmartParkingApp
    - **Search / Retrieval** → find any vehicle by plate in `O(log n)` or `O(1)`.
    - **Logs** → review everything that happened.
 4. The **Reset All** button (Dashboard) clears all records, occupancy and queues.
-
----
-
-## 👥 Authors
-
-WIA1002 Data Structures — Group Assignment, University of Malaya.
 
 ---
 

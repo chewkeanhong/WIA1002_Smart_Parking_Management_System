@@ -10,13 +10,9 @@ import javax.swing.table.DefaultTableModel;
 import java.awt.*;
 import java.util.List;
 
-/**
- * Module 5 — Search System
- * Data Structure: AVL Tree (self-balancing BST). Search is O(log n).
- *
- * Lists every currently-parked vehicle and offers an AVL-backed lookup by plate.
- * The tree is rebuilt automatically whenever the shared {@code RecordManager} changes.
- */
+// Search screen. Lists the parked vehicles and lets you look one up by plate,
+// using the AVL tree behind SearchEngine. Rebuilds the tree whenever the
+// shared RecordManager changes.
 public class SearchPanel extends JPanel {
 
     private final ActivityLog   log;
@@ -49,7 +45,7 @@ public class SearchPanel extends JPanel {
         new Timer(1000, e -> syncFromRecords()).start();
     }
 
-    // ── Header ────────────────────────────────────────────────────────────────
+    // Header
     private JPanel buildHeader() {
         JPanel p = new JPanel(new BorderLayout());
         p.setOpaque(false);
@@ -69,7 +65,7 @@ public class SearchPanel extends JPanel {
         return p;
     }
 
-    // ── Body ──────────────────────────────────────────────────────────────────
+    // Body
     private JPanel buildBody() {
         JPanel body = new JPanel(new BorderLayout(0, 14));
         body.setOpaque(false);
@@ -116,7 +112,7 @@ public class SearchPanel extends JPanel {
         return card;
     }
 
-    // ── Sync with shared RecordManager ───────────────────────────────────────
+    // Sync with shared RecordManager
     private void syncFromRecords() {
         String sig = signatureOf(records.getAllVehiclesList());
         if (!sig.equals(lastVehicleSignature)) {
@@ -169,7 +165,7 @@ public class SearchPanel extends JPanel {
         return sb.toString();
     }
 
-    // ── Search action ────────────────────────────────────────────────────────
+    // Search action
     private void searchVehicle() {
         String plate = Vehicle.normalizePlate(tfSearch.getText().trim());
         if (plate.isEmpty()) {

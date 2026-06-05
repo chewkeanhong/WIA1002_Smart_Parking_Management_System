@@ -2,12 +2,12 @@ package search;
 
 import models.Vehicle;
 
-/** AVL tree node keyed by license plate string. */
+// one node of the AVL tree, keyed by license plate
 public class TreeNode {
     public String   key;     // license plate
     public Vehicle  vehicle;
     public TreeNode left, right;
-    public int      height;  // AVL balance tracking
+    public int      height;  // used to keep the tree balanced
 
     public TreeNode(String key, Vehicle vehicle) {
         this.key     = key;

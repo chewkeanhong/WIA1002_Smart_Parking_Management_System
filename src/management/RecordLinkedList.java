@@ -1,17 +1,13 @@
 package management;
 
-/**
- * A custom generic linked list to dynamically store records.
- * This satisfies the requirement for dynamic data handling without the 
- * fixed-size limitations of standard arrays.
- */
+// Our own generic linked list for storing records. We wrote this instead
+// of using an array so it can grow as needed without a fixed size.
 public class RecordLinkedList<T> {
-    
+
     private Node<T> head;
     private Node<T> tail;
     private int size;
 
-    // Internal Node class
     private static class Node<T> {
         T data;
         Node<T> next;
@@ -28,11 +24,7 @@ public class RecordLinkedList<T> {
         this.size = 0;
     }
 
-    /**
-     * Adds a new record to the end of the list.
-     * Time Complexity: O(1) - Because we maintain a tail pointer, 
-     * insertion at the end is constant time.
-     */
+    // add to the end. we keep a tail pointer so this stays cheap.
     public void add(T item) {
         Node<T> newNode = new Node<>(item);
         if (head == null) {
@@ -45,31 +37,26 @@ public class RecordLinkedList<T> {
         size++;
     }
 
-    /**
-     * Removes a specific record from the list.
-     * Time Complexity: O(N) - In the worst case, we must traverse 
-     * the entire list to find the element to remove.
-     */
+    // remove an item - might have to walk the whole list to find it
     public boolean remove(T item) {
         if (head == null) return false;
 
-        // If the item to remove is the head
+        // special case: it's the head node
         if (head.data.equals(item)) {
             head = head.next;
             if (head == null) {
-                tail = null; // List became empty
+                tail = null; // list is now empty
             }
             size--;
             return true;
         }
 
-        // Search for the item
         Node<T> current = head;
         while (current.next != null) {
             if (current.next.data.equals(item)) {
                 current.next = current.next.next;
                 if (current.next == null) {
-                    tail = current; // We removed the tail node
+                    tail = current; // we just removed the tail
                 }
                 size--;
                 return true;
@@ -79,10 +66,7 @@ public class RecordLinkedList<T> {
         return false;
     }
 
-    /**
-     * Displays all records in the list to standard output.
-     * Time Complexity: O(N) - Requires iterating through every node.
-     */
+    // print everything out (handy for debugging in the console)
     public void display() {
         if (head == null) {
             System.out.println("No records found.");
@@ -95,18 +79,11 @@ public class RecordLinkedList<T> {
         }
     }
 
-    /**
-     * Returns the current size of the list.
-     * Time Complexity: O(1)
-     */
     public int getSize() {
         return size;
     }
 
-    /**
-     * Returns a java.util.List snapshot for UI consumption.
-     * Time Complexity: O(N)
-     */
+    // dump everything into a normal List so the UI tables can use it
     public java.util.List<T> toList() {
         java.util.List<T> list = new java.util.ArrayList<>();
         Node<T> curr = head;

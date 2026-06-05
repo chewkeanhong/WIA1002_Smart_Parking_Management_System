@@ -2,10 +2,8 @@ package gate_control;
 
 import models.Vehicle;
 
-/**
- * LIFO stack backed by a resizable array.
- * Push: O(1) amortised  |  Pop: O(1)  |  Peek: O(1)
- */
+// LIFO stack that remembers gate actions so we can undo them.
+// Backed by a plain array that doubles when it runs out of room.
 public class UndoStack {
 
     public static class Action {
@@ -28,9 +26,8 @@ public class UndoStack {
 
     public UndoStack() { stack = new Action[32]; top = -1; }
 
-    /** Push an action — O(1) amortised. */
     public void push(Action action) {
-        if (top == stack.length - 1) {
+        if (top == stack.length - 1) {     // full, so grow it first
             Action[] grown = new Action[stack.length * 2];
             System.arraycopy(stack, 0, grown, 0, stack.length);
             stack = grown;
@@ -38,17 +35,14 @@ public class UndoStack {
         stack[++top] = action;
     }
 
-    /** Pop the most recent action — O(1). */
     public Action pop()  { return isEmpty() ? null : stack[top--]; }
 
     public Action  peek()    { return isEmpty() ? null : stack[top]; }
     public boolean isEmpty() { return top < 0; }
     public int     getSize() { return top + 1; }
 
-    /**
-     * Removes every action that references the given vehicle. Returns the number of actions removed.
-     * Used when a user cancels an entry via the UI so a later Undo can't resurrect it.
-     */
+    // wipe out every action for a vehicle so a later Undo can't bring it back.
+    // returns how many we removed. compacts the array in place.
     public int removeActionsFor(Vehicle vehicle) {
         if (vehicle == null || isEmpty()) return 0;
         int write = 0, removed = 0;
@@ -61,7 +55,7 @@ public class UndoStack {
         return removed;
     }
 
-    /** Returns a snapshot in push order (bottom → top) for UI display. */
+    // copy in push order (bottom to top) for the UI list
     public Action[] toArray() {
         Action[] arr = new Action[top + 1];
         System.arraycopy(stack, 0, arr, 0, top + 1);

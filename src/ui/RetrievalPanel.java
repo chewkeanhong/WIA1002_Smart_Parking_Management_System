@@ -12,11 +12,8 @@ import javax.swing.table.DefaultTableModel;
 import java.awt.*;
 import java.util.List;
 
-/**
- * Module 6 — Fast Data Retrieval
- * Data Structure: Hash Table (custom HashMap with separate chaining)
- * Put / Get / Remove: O(1) average  |  O(n) worst (all keys in one bucket)
- */
+// Retrieval screen. Looks vehicles and slots up instantly through our custom
+// hash table (FastAccessor) and shows what's sitting in each bucket.
 public class RetrievalPanel extends JPanel {
 
     private final ActivityLog   log;
@@ -63,7 +60,7 @@ public class RetrievalPanel extends JPanel {
         new javax.swing.Timer(1000, e -> refreshTables()).start();
     }
 
-    // ── Header ────────────────────────────────────────────────────────────────
+    // Header
     private JPanel buildHeader() {
         JPanel p = new JPanel(new BorderLayout());
         p.setOpaque(false);
@@ -83,7 +80,7 @@ public class RetrievalPanel extends JPanel {
         return p;
     }
 
-    // ── Body ──────────────────────────────────────────────────────────────────
+    // Body
     private JPanel buildBody() {
         JPanel p = new JPanel(new GridLayout(1, 2, 14, 0));
         p.setOpaque(false);
@@ -92,7 +89,7 @@ public class RetrievalPanel extends JPanel {
         return p;
     }
 
-    // ── Left: cache forms + lookup ────────────────────────────────────────────
+    // Left: cache forms + lookup
     private JPanel buildLeftColumn() {
         // GridBagLayout with equal vertical weights keeps all three cards visible
         // and shrinks them proportionally — a BorderLayout would collapse the middle one.
@@ -179,7 +176,7 @@ public class RetrievalPanel extends JPanel {
         return col;
     }
 
-    // ── Right: hash table views ───────────────────────────────────────────────
+    // Right: hash table views
     private JPanel buildRightColumn() {
         JPanel col = new JPanel(new GridLayout(2, 1, 0, 10));
         col.setOpaque(false);
@@ -211,7 +208,7 @@ public class RetrievalPanel extends JPanel {
         return col;
     }
 
-    // ── Complexity banner ─────────────────────────────────────────────────────
+    // Complexity banner
     private JPanel buildComplexity() {
         return UITheme.makeComplexityBanner(
             "<b>Hash Table (separate chaining):</b> &nbsp;" +
@@ -223,7 +220,7 @@ public class RetrievalPanel extends JPanel {
         );
     }
 
-    // ── Actions ───────────────────────────────────────────────────────────────
+    // Actions
     private void cacheVehicle() {
         String plate = tfPlate.getText().trim().toUpperCase();
         String owner = tfOwner.getText().trim();
@@ -351,7 +348,7 @@ public class RetrievalPanel extends JPanel {
         }
     }
 
-    // ── Table refresh ─────────────────────────────────────────────────────────
+    // Table refresh
     private void refreshTables() {
         syncCachesFromRecords();
         vehicleMapModel.setRowCount(0);
@@ -400,7 +397,7 @@ public class RetrievalPanel extends JPanel {
         }
     }
 
-    // ── Form helper ───────────────────────────────────────────────────────────
+    // Form helper
     @FunctionalInterface
     private interface FieldSetter { void set(JTextField[] fields); }
 

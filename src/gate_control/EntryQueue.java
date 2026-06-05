@@ -2,10 +2,8 @@ package gate_control;
 
 import models.Vehicle;
 
-/**
- * Custom FIFO queue backed by a singly-linked list.
- * Enqueue: O(1)  |  Dequeue: O(1)  |  Peek: O(1)
- */
+// Our own FIFO queue for vehicles waiting at the gate.
+// Backed by a singly-linked list with front and rear pointers.
 public class EntryQueue {
 
     private static class Node {
@@ -20,7 +18,7 @@ public class EntryQueue {
 
     public EntryQueue() { front = null; rear = null; size = 0; }
 
-    /** Add vehicle to the back of the queue — O(1). */
+    // add to the back of the line
     public void enqueue(Vehicle vehicle) {
         Node n = new Node(vehicle);
         if (rear == null) { front = n; rear = n; }
@@ -28,7 +26,7 @@ public class EntryQueue {
         size++;
     }
 
-    /** Remove and return the front vehicle — O(1). */
+    // take the vehicle at the front
     public Vehicle dequeue() {
         if (isEmpty()) return null;
         Vehicle v = front.vehicle;
@@ -42,7 +40,7 @@ public class EntryQueue {
     public boolean isEmpty() { return size == 0; }
     public int getSize()     { return size; }
 
-    /** Add vehicle to the FRONT of the queue (used by undo of a PROCESSED action) — O(1). */
+    // put a vehicle back at the front - used when we undo a "processed" action
     public void enqueueAtFront(Vehicle vehicle) {
         Node n = new Node(vehicle);
         if (front == null) { front = n; rear = n; }
@@ -50,7 +48,8 @@ public class EntryQueue {
         size++;
     }
 
-    /** Remove the LAST (most recently enqueued) vehicle (used by undo of an ENQUEUED action) — O(n). */
+    // drop the last vehicle we added - used when we undo an "enqueued" action.
+    // have to walk the whole list since it's singly linked.
     public Vehicle removeLast() {
         if (isEmpty()) return null;
         if (front == rear) {          // only one node
@@ -65,10 +64,8 @@ public class EntryQueue {
         return v;
     }
 
-    /**
-     * Removes the first node holding the given vehicle (by reference). Returns true if found.
-     * Used when a user cancels a queued entry via the UI before it is dequeued.
-     */
+    // remove a specific vehicle from anywhere in the queue (by reference).
+    // happens when a user cancels their entry before being processed.
     public boolean remove(Vehicle vehicle) {
         if (isEmpty() || vehicle == null) return false;
         if (front.vehicle == vehicle) {
@@ -86,7 +83,7 @@ public class EntryQueue {
         return true;
     }
 
-    /** Returns a snapshot array in FIFO order for UI display. */
+    // array copy in FIFO order so the UI can list who's waiting
     public Vehicle[] toArray() {
         Vehicle[] arr = new Vehicle[size];
         Node curr = front;

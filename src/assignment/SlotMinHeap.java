@@ -2,42 +2,32 @@ package assignment;
 
 import models.ParkingSlot;
 
-/**
- * Binary Min-Heap ordered by distanceToGate (1-indexed array).
- * Insert: O(log n)  |  Poll min: O(log n)  |  Peek: O(1)
- * Contrast with linear search: O(n) scan to find nearest slot.
- */
-
+// Min-heap of parking slots, ordered by distance to the gate so the
+// nearest free slot is always at the root. We use a 1-indexed array
+// (index 0 stays empty) because the parent/child math is cleaner that way.
 public class SlotMinHeap {
 
-    // Index 0 is left unused so parent/child calculations stay simple:
-    // parent = i / 2, left child = 2 * i, right child = 2 * i + 1.
+    // parent of i = i/2, children = 2i and 2i+1
     private ParkingSlot[] heap;
     private int size;
 
-    // Start with spare capacity so inserts do not resize immediately.
-    public SlotMinHeap() { 
-        heap = new ParkingSlot[64]; size = 0; 
+    public SlotMinHeap() {
+        heap = new ParkingSlot[64]; size = 0;
     }
 
-    /**
-     * Insert a slot at the end of the array, then bubble it upward until
-     * the min-heap property is restored.
-     */
+    // add the slot at the end, then let it bubble up to its spot
     public void insert(ParkingSlot slot) {
-        if (size == heap.length - 1) 
+        if (size == heap.length - 1)
             grow();
 
         heap[++size] = slot;
         bubbleUp(size);
     }
 
-    /**
-     * Remove and return the nearest slot.
-     * The root is replaced with the last element, then sifted down.
-     */
+    // take out the nearest slot (the root). move the last element up
+    // to the top and sift it back down to fix the order.
     public ParkingSlot pollMin() {
-        if (isEmpty()) 
+        if (isEmpty())
             return null;
 
         ParkingSlot min = heap[1];
@@ -46,50 +36,39 @@ public class SlotMinHeap {
         return min;
     }
 
-    // Read the nearest slot without changing heap contents.
-    public ParkingSlot peekMin() { 
-        return isEmpty() ? null : heap[1]; 
+    public ParkingSlot peekMin() {
+        return isEmpty() ? null : heap[1];
     }
 
-    // True when there are no slots in the heap.
-    public boolean isEmpty() { 
-        return size == 0; 
+    public boolean isEmpty() {
+        return size == 0;
     }
 
-    // Current number of stored slots.
-    public int getSize() { 
-        return size; 
+    public int getSize() {
+        return size;
     }
 
-    // Reset the heap to an empty state. 
     public void clear() {
         heap = new ParkingSlot[64];
         size = 0;
     }
 
-    /**
-     * Snapshot of the heap in array order for UI display.
-     * This is heap order, not sorted order.
-     */
+    // copy of the array for the UI table. note this is heap order, not sorted.
     public ParkingSlot[] toArray() {
         ParkingSlot[] arr = new ParkingSlot[size];
         System.arraycopy(heap, 1, arr, 0, size);
         return arr;
     }
 
-    // ── Heap helpers ──────────────────────────────────────────────────────────
-    // Move a newly inserted node upward until its parent is smaller.
+    // keep swapping with the parent while we're smaller than it
     private void bubbleUp(int i) {
-        while (i > 1 && dist(i) < dist(i / 2)) { 
-            swap(i, i / 2); 
-            i /= 2; 
+        while (i > 1 && dist(i) < dist(i / 2)) {
+            swap(i, i / 2);
+            i /= 2;
         }
     }
 
-    /**
-     * Push the root downward until both children are greater or the node
-     * reaches a valid position.
-     */
+    // push a node down until both its children are bigger (or it has none)
     private void siftDown(int i) {
         while (2 * i <= size) {
             int child = 2 * i;
@@ -108,13 +87,13 @@ public class SlotMinHeap {
         return heap[i].getDistanceToGate(); 
     }
 
-    private void swap(int a, int b) { 
-        ParkingSlot t = heap[a]; 
-        heap[a] = heap[b]; 
-        heap[b] = t; 
+    private void swap(int a, int b) {
+        ParkingSlot t = heap[a];
+        heap[a] = heap[b];
+        heap[b] = t;
     }
 
-    // Double the backing array when it is full.
+    // double the array size once it fills up
     private void grow() {
         ParkingSlot[] g = new ParkingSlot[heap.length * 2];
         System.arraycopy(heap, 0, g, 0, heap.length);

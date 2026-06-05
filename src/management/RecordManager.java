@@ -3,10 +3,8 @@ package management;
 import models.ParkingSlot;
 import models.Vehicle;
 
-/**
- * Manages the dynamic storage and retrieval of Vehicle and ParkingSlot records.
- * Acts as the logic layer for the UI and Core application.
- */
+// Keeps two linked lists - one for vehicles, one for slots - and gives
+// the UI simple add / remove / find methods to work with them.
 public class RecordManager {
 
     private RecordLinkedList<Vehicle> vehicleRecords;
@@ -17,9 +15,7 @@ public class RecordManager {
         this.parkingSlotRecords = new RecordLinkedList<>();
     }
 
-    // ==========================================
-    // VEHICLE MANAGEMENT
-    // ==========================================
+    // --- Vehicles ---
 
     public void addVehicleRecord(Vehicle vehicle) {
         if (vehicle != null) {
@@ -44,9 +40,7 @@ public class RecordManager {
         System.out.println("Total Vehicles: " + vehicleRecords.getSize());
     }
 
-    // ==========================================
-    // PARKING SLOT MANAGEMENT
-    // ==========================================
+    // --- Parking slots ---
 
     public void addParkingSlotRecord(ParkingSlot slot) {
         if (slot != null) {
@@ -71,9 +65,7 @@ public class RecordManager {
         System.out.println("Total Slots: " + parkingSlotRecords.getSize());
     }
 
-    // ==========================================
-    // UI-FACING LIST ACCESSORS
-    // ==========================================
+    // --- Accessors for the UI ---
 
     public java.util.List<Vehicle> getAllVehiclesList() {
         return vehicleRecords.toList();

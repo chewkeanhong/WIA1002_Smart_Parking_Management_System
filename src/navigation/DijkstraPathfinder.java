@@ -6,9 +6,11 @@ import java.util.List;
 import java.util.LinkedList;
 import java.util.Collections;
 
+// Runs Dijkstra's shortest-path algorithm over the RouteGraph to find
+// either the nearest free slot or a route to a specific destination.
 public class DijkstraPathfinder {
 
-    // Helper class to track costs in the PriorityQueue
+    // wraps a node + its current best cost so the priority queue can order them
     private static class PathNode implements Comparable<PathNode> {
         String id;
         double cost;
@@ -29,31 +31,31 @@ public class DijkstraPathfinder {
         Map<String, String> predecessors = new HashMap<>();
         PriorityQueue<PathNode> pq = new PriorityQueue<>();
 
-        // 1. Initialize distances
+        // start every node at "infinity" except the entrance
         for (RouteGraph.Node node : graph.getAllNodes()) {
             minCosts.put(node.id, Double.MAX_VALUE);
         }
 
         minCosts.put(startEntranceId, 0.0);
         pq.add(new PathNode(startEntranceId, 0.0));
-        
+
         String targetSpotId = null;
 
-        // 2. Core Dijkstra Loop
+        // keep pulling the cheapest node until we hit a free slot
         while (!pq.isEmpty()) {
             PathNode current = pq.poll();
             RouteGraph.Node currentNode = graph.getNode(current.id);
 
-            // Goal Evaluation: Found the closest spot that is an available parking space!
+            // this is the first free parking slot we've reached, so it's the nearest one
             if (currentNode.isParkingSlot && !currentNode.isOccupied) {
                 targetSpotId = currentNode.id;
                 break;
             }
 
-            // Skip processing if we found a shorter path to this node already
+            // already found a cheaper way here, ignore this stale entry
             if (current.cost > minCosts.get(current.id)) continue;
 
-            // Check adjacent paths
+            // relax the neighbours
             for (RouteGraph.Edge edge : graph.getNeighbors(current.id)) {
                 RouteGraph.Node neighbor = edge.target;
                 double alternateCost = minCosts.get(current.id) + edge.weight;
@@ -66,11 +68,12 @@ public class DijkstraPathfinder {
             }
         }
 
-        // 3. Reconstruct path if a match was successfully found
+        // nothing found means the lot is full
         if (targetSpotId == null) {
-            return Collections.emptyList(); // Returns empty if parking is completely full
+            return Collections.emptyList();
         }
 
+        // walk the predecessors backwards to rebuild the route
         LinkedList<String> finalPath = new LinkedList<>();
         String step = targetSpotId;
         while (step != null) {
@@ -81,10 +84,8 @@ public class DijkstraPathfinder {
         return finalPath;
     }
 
-    /**
-     * Dijkstra variant that terminates when a specific destination node is reached.
-     * Returns the ordered list of node IDs from start to end, or an empty list if unreachable.
-     */
+    // same as above but stops once we reach a specific node.
+    // gives back the node ids from start to end, or empty if there's no route.
     public static List<String> findShortestPath(RouteGraph graph, String startId, String endId) {
         if (graph.getNode(startId) == null || graph.getNode(endId) == null) {
             return Collections.emptyList();
@@ -128,10 +129,8 @@ public class DijkstraPathfinder {
         return path;
     }
 
-    /**
-     * Calculates the total edge weight for an already constructed path.
-     * Returns Integer.MAX_VALUE if the path is invalid or an edge is missing.
-     */
+    // add up the edge weights along a path we already have.
+    // returns MAX_VALUE if the path is broken (some edge doesn't exist).
     public static int calculatePathCost(RouteGraph graph, List<String> path) {
         if (graph == null || path == null || path.size() < 2) {
             return 0;
@@ -161,7 +160,7 @@ public class DijkstraPathfinder {
         return (int) Math.round(total);
     }
 
-    /** Convenience helper that computes the cost for the shortest path. */
+    // shortcut: find the shortest path and return just its cost
     public static int calculateShortestPathCost(RouteGraph graph, String startId, String endId) {
         return calculatePathCost(graph, findShortestPath(graph, startId, endId));
     }

@@ -17,11 +17,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-/**
- * Module 4 — Route Navigation
- * Big lot map at the centre. Bottom strip of clickable vehicle bubbles —
- * one click selects a vehicle and instantly draws its route from the entrance.
- */
+// Navigation screen. Big lot map in the middle with a row of vehicle bubbles
+// along the bottom - click one and it draws that car's route from the entrance
+// (Dijkstra over the RouteGraph).
 public class NavigationPanel extends JPanel {
 
     private static final String DEFAULT_ACCESS_NODE = "ENTRANCE";
@@ -66,7 +64,7 @@ public class NavigationPanel extends JPanel {
         }).start();
     }
 
-    // ── Header ────────────────────────────────────────────────────────────────
+    // Header
     private JPanel buildHeader() {
         JPanel p = new JPanel(new BorderLayout());
         p.setOpaque(false);
@@ -86,7 +84,7 @@ public class NavigationPanel extends JPanel {
         return p;
     }
 
-    // ── Body: big map (center) + directions (east) + bubble strip (south) ──────
+    // Body: big map (center) + directions (east) + bubble strip (south)
     private JPanel buildBody() {
         JPanel body = new JPanel(new BorderLayout(0, 14));
         body.setOpaque(false);
@@ -155,7 +153,7 @@ public class NavigationPanel extends JPanel {
         return card;
     }
 
-    // ── Bubble rebuild + selection ────────────────────────────────────────────
+    // Bubble rebuild + selection
     private void rebuildBubbles() {
         bubbleContainer.removeAll();
         bubblesByPlate.clear();
@@ -255,7 +253,7 @@ public class NavigationPanel extends JPanel {
         }
     }
 
-    // ── Click → route ────────────────────────────────────────────────────────
+    // Click → route
     private void selectVehicle(Vehicle v) {
         // Clicking the already-selected bubble deselects it
         if (v.getLicensePlate().equals(routedPlate)) {
@@ -363,7 +361,7 @@ public class NavigationPanel extends JPanel {
         return slotId;
     }
 
-    // ── Auto-sync (1 s tick) ─────────────────────────────────────────────────
+    // Auto-sync (1 s tick)
     private void syncVehicles() {
         String sig = signatureOf(records.getAllVehiclesList());
         if (!sig.equals(lastVehicleSignature)) {
@@ -400,7 +398,7 @@ public class NavigationPanel extends JPanel {
         return sb.toString();
     }
 
-    // ── Path → human directions ──────────────────────────────────────────────
+    // Path → human directions
     private String buildDirections(List<String> path, String startNode, int distMetres) {
         if (path.size() < 2) return "Already at destination.";
         StringBuilder sb = new StringBuilder();
@@ -474,7 +472,7 @@ public class NavigationPanel extends JPanel {
         statusLabel.setForeground(color);
     }
 
-    // ── Canvas: dashboard-style lot with road frame and route polyline ───────
+    // Canvas: dashboard-style lot with road frame and route polyline
     private class LotMapCanvas extends JPanel {
         private static final double LOGICAL_W = 1000.0;
         private static final double LOGICAL_H = 640.0;

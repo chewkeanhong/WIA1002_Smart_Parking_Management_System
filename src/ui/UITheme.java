@@ -6,7 +6,7 @@ import javax.swing.border.*;
 
 public class UITheme {
 
-    // ── Backgrounds ──────────────────────────────────────────────────────────
+    // Backgrounds
     public static final Color BG_DARK      = new Color(13,  17,  23);
     public static final Color BG_SIDEBAR   = new Color(21,  27,  43);
     public static final Color BG_CARD      = new Color(28,  36,  54);
@@ -14,27 +14,27 @@ public class UITheme {
     public static final Color BG_TABLE_ROW = new Color(22,  29,  44);
     public static final Color BG_TABLE_ALT = new Color(26,  34,  52);
 
-    // ── Accent ───────────────────────────────────────────────────────────────
+    // Accent
     public static final Color ACCENT       = new Color(37,  99, 235);
     public static final Color ACCENT_HOVER = new Color(59, 130, 246);
     public static final Color ACCENT_DIM   = new Color(37,  99, 235,  60);
 
-    // ── Text ─────────────────────────────────────────────────────────────────
+    // Text
     public static final Color TEXT_PRIMARY  = new Color(230, 237, 243);
     public static final Color TEXT_SECONDARY= new Color(139, 148, 158);
     public static final Color TEXT_MUTED    = new Color( 88,  96, 105);
 
-    // ── Status ───────────────────────────────────────────────────────────────
+    // Status
     public static final Color SUCCESS = new Color( 34, 197,  94);
     public static final Color WARNING = new Color(234, 179,   8);
     public static final Color DANGER  = new Color(239,  68,  68);
     public static final Color INFO    = new Color( 56, 189, 248);
 
-    // ── Borders ──────────────────────────────────────────────────────────────
+    // Borders
     public static final Color BORDER       = new Color(48, 54, 61);
     public static final Color BORDER_LIGHT = new Color(68, 74, 81);
 
-    // ── Fonts ─────────────────────────────────────────────────────────────────
+    // Fonts
     public static final Font FONT_BRAND    = new Font("Segoe UI", Font.BOLD,  26);
     public static final Font FONT_TITLE    = new Font("Segoe UI", Font.BOLD,  22);
     public static final Font FONT_SUBTITLE = new Font("Segoe UI", Font.BOLD,  15);
@@ -43,7 +43,7 @@ public class UITheme {
     public static final Font FONT_LABEL    = new Font("Segoe UI", Font.PLAIN, 14);
     public static final Font FONT_MONO     = new Font("Consolas",  Font.PLAIN, 14);
 
-    // ── Button factory ────────────────────────────────────────────────────────
+    // Button factory
     public static JButton makeButton(String text, Color bg) {
         JButton b = new JButton(text);
         b.setBackground(bg);
@@ -69,8 +69,8 @@ public class UITheme {
         return makeButton(text, BG_CARD);
     }
 
-    // ── ComboBox styling ──────────────────────────────────────────────────────
-    // ── Field factory ─────────────────────────────────────────────────────────
+    // ComboBox styling
+    // Field factory
     public static JTextField makeTextField(int cols) {
         JTextField f = new JTextField(cols);
         f.setBackground(BG_INPUT);
@@ -83,7 +83,7 @@ public class UITheme {
         return f;
     }
 
-    // ── Label factories ───────────────────────────────────────────────────────
+    // Label factories
     public static JLabel makeLabel(String text) {
         JLabel l = new JLabel(text);
         l.setForeground(TEXT_SECONDARY);
@@ -108,7 +108,7 @@ public class UITheme {
         return l;
     }
 
-    // ── Card panel factory ────────────────────────────────────────────────────
+    // Card panel factory
     public static JPanel makeCard() {
         JPanel p = new JPanel();
         p.setBackground(BG_CARD);
@@ -124,7 +124,7 @@ public class UITheme {
         return p;
     }
 
-    // ── Stat card factory ─────────────────────────────────────────────────────
+    // Stat card factory
     public static JPanel makeStatCard(String label, String value, Color accent) {
         JPanel card = makeCard(new BorderLayout(0, 6));
         JLabel lbl = new JLabel(label.toUpperCase());
@@ -138,7 +138,7 @@ public class UITheme {
         return card;
     }
 
-    // ── Log area factory ──────────────────────────────────────────────────────
+    // Log area factory
     public static JTextArea makeLogArea() {
         JTextArea ta = new JTextArea();
         ta.setBackground(BG_INPUT);
@@ -149,7 +149,7 @@ public class UITheme {
         return ta;
     }
 
-    // ── Scroll pane factory ───────────────────────────────────────────────────
+    // Scroll pane factory
     public static JScrollPane wrapScroll(Component c) {
         JScrollPane sp = new JScrollPane(c);
         sp.setBorder(BorderFactory.createLineBorder(BORDER, 1));
@@ -159,7 +159,7 @@ public class UITheme {
         return sp;
     }
 
-    // ── Table styling ─────────────────────────────────────────────────────────
+    // Table styling
     public static void styleTable(JTable table) {
         table.setBackground(BG_TABLE_ROW);
         table.setForeground(TEXT_PRIMARY);
@@ -176,7 +176,7 @@ public class UITheme {
         table.getTableHeader().setBorder(BorderFactory.createMatteBorder(0, 0, 1, 0, BORDER));
     }
 
-    // ── Section header ────────────────────────────────────────────────────────
+    // Section header
     public static JPanel makeSectionHeader(String title, String badge, Color badgeColor) {
         JPanel p = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
         p.setOpaque(false);
@@ -185,7 +185,7 @@ public class UITheme {
         return p;
     }
 
-    // ── Complexity info banner ────────────────────────────────────────────────
+    // Complexity info banner
     public static JPanel makeComplexityBanner(String text) {
         JPanel p = new JPanel(new BorderLayout());
         p.setBackground(new Color(20, 40, 80));
@@ -199,7 +199,7 @@ public class UITheme {
         return p;
     }
 
-    // ── Apply global UI defaults ──────────────────────────────────────────────
+    // Apply global UI defaults
     public static void applyGlobalDefaults() {
         UIManager.put("Panel.background",          BG_DARK);
         UIManager.put("ScrollPane.background",     BG_DARK);

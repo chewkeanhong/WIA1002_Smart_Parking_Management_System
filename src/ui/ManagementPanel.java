@@ -13,11 +13,8 @@ import javax.swing.border.*;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
 
-/**
- * Module 1 — Parking & Vehicle Management
- * Data Structures: Singly Linked List (RecordLinkedList)
- * Operations: add O(1) | remove O(n) | display O(n)
- */
+// Management screen for vehicles and slots. Everything lives in the
+// RecordLinkedList (our own linked list) behind RecordManager.
 public class ManagementPanel extends JPanel {
 
     private final ActivityLog    log;
@@ -78,7 +75,7 @@ public class ManagementPanel extends JPanel {
         this(log, dashboard, mgr, null, null, parkingMap);
     }
 
-    // ── Header ────────────────────────────────────────────────────────────────
+    // Header
     private JPanel buildHeader() {
         JPanel p = new JPanel(new BorderLayout());
         p.setOpaque(false);
@@ -98,7 +95,7 @@ public class ManagementPanel extends JPanel {
         return p;
     }
 
-    // ── Main body ─────────────────────────────────────────────────────────────
+    // Main body
     private JPanel buildBody() {
         JPanel p = new JPanel(new GridLayout(1, 2, 14, 0));
         p.setOpaque(false);
@@ -107,7 +104,7 @@ public class ManagementPanel extends JPanel {
         return p;
     }
 
-    // ── Vehicle section ───────────────────────────────────────────────────────
+    // Vehicle section
     private JPanel buildVehicleSection() {
         JPanel card = UITheme.makeCard(new BorderLayout(0, 10));
 
@@ -165,7 +162,7 @@ public class ManagementPanel extends JPanel {
         return card;
     }
 
-    // ── Slot section ──────────────────────────────────────────────────────────
+    // Slot section
     private JPanel buildSlotSection() {
         JPanel card = UITheme.makeCard(new BorderLayout(0, 10));
 
@@ -211,7 +208,7 @@ public class ManagementPanel extends JPanel {
         return card;
     }
 
-    // ── Table builder ─────────────────────────────────────────────────────────
+    // Table builder
     private JTable buildTable(DefaultTableModel model) {
         JTable t = new JTable(model);
         UITheme.styleTable(t);
@@ -219,7 +216,7 @@ public class ManagementPanel extends JPanel {
         return t;
     }
 
-    // ── Complexity banner ─────────────────────────────────────────────────────
+    // Complexity banner
     private JPanel buildComplexity() {
         return UITheme.makeComplexityBanner(
             "<b>Linked List Complexity:</b> &nbsp;" +
@@ -231,7 +228,7 @@ public class ManagementPanel extends JPanel {
         );
     }
 
-    // ── Actions ───────────────────────────────────────────────────────────────
+    // Actions
     private void addVehicle() {
         String plate = tfPlate.getText().trim().toUpperCase();
         String owner = tfOwner.getText().trim();
@@ -381,7 +378,7 @@ public class ManagementPanel extends JPanel {
         refreshDashboard();
     }
 
-    // ── Helpers ───────────────────────────────────────────────────────────────
+    // Helpers
     private void status(String msg, Color color) {
         statusLabel.setText(msg);
         statusLabel.setForeground(color);
