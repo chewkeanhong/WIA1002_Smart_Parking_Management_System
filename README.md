@@ -15,16 +15,13 @@ can be searched and retrieved instantly, and routed to their bay on a map.
 > **WIA1002 Data Structures — Group Assignment**, Faculty of Computer Science &
 > Information Technology, University of Malaya.
 
-| Name | GitHub |
+| Name | Matrics Number |
 |------|--------|
-| Tey Yong Zhun | [@TeyYongZhun](https://github.com/TeyYongZhun) |
-| Chew Kean Hong | [@chewkeanhong](https://github.com/chewkeanhong) |
-| Edrian Tan | [@Edrian55](https://github.com/Edrian55) |
-| Soo Kang Shi | [@sookangshi-sketch](https://github.com/sookangshi-sketch) |
-
-> _Note: please update this list with the full names and GitHub handles of all
-> group members._
-
+| Chew Kean Hong | 25006697 |
+| Tey Yong Zhun | 25006379 |
+| Edrian Tan | 25006656 |
+| Soo Kang Shi | 25005517 |
+| Lee Wuey Yong | 25005996 |
 ---
 
 ## ✨ Features
