@@ -108,7 +108,6 @@ WIA1002_Smart_Parking_Management_System/
 │   └── ui/                           # ▶ Swing user interface
 │       ├── MainFrame.java            #   Admin window + sidebar navigation
 │       ├── UserFrame.java            #   User-facing window
-│       ├── RoleSelectionScreen.java  #   Admin / User role picker
 │       ├── UITheme.java              #   Shared colors, fonts, components
 │       ├── ActivityLog.java          #   In-memory log of system actions
 │       ├── DashboardPanel.java       #   Overview & stats screen
