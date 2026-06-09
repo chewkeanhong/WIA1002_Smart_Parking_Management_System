@@ -120,9 +120,6 @@ WIA1002_Smart_Parking_Management_System/
 │       ├── RetrievalPanel.java       #   Retrieval screen
 │       └── UserPanel.java            #   User screen
 │
-├── data/                             # Runtime data files
-├── images/                           # Image assets (icons, map art)
-├── audio/                            # Audio assets
 ├── docs/                             # Assignment brief (PDF) & documentation
 ├── out/  ·  bin/                     # Compiled .class output (generated)
 └── README.md
